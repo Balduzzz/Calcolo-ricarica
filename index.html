@@ -12,87 +12,84 @@
 *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-tap-highlight-color:transparent}
 body{margin:0;padding:18px 14px;background:var(--bg);color:var(--txt);display:flex;justify-content:center}
 .app{width:100%;max-width:420px}
-.hdr{display:flex;justify-content:space-between;align-items:center;margin:0 0 14px;height:28px}
-h1{font-size:1.25rem;margin:0;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sync-pill{font-size:.68rem;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--soft);color:var(--acc);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
-.sync-pill.err{background:var(--amb-soft);color:var(--amb)}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.hdr{display:flex;justify-content:space-between;align-items:center;margin:0 0 14px}
+h1{font-size:1.25rem;margin:0;font-weight:800;letter-spacing:-.01em}
+.live-badge{font-size:.7rem;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--soft);color:var(--acc);letter-spacing:.03em;white-space:nowrap}
+.live-badge.off{background:var(--amb-soft);color:var(--amb)}
 .card{background:var(--card);border-radius:20px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.06);margin-bottom:14px;border:1px solid var(--brd);transition:opacity .2s;overflow:hidden}
-#cardCurrent{height:106px}
-#step2{height:212px}
-#stepTime{height:108px}
 .card.dis{opacity:.45;pointer-events:none}
-.ct{font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;height:26px}
-.ct span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ct-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+#cardCurrent{height:124px}
+#step2{height:232px}
+#stepTime{height:124px}
+.ct{font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;height:24px}
+.ct-actions{display:flex;align-items:center;gap:6px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-label{display:block;font-size:.82rem;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+label{display:block;font-size:.82rem;color:var(--mut);font-weight:600}
 .iw{position:relative;display:flex;align-items:center}
-input{width:100%;height:48px;padding:10px 36px 10px 12px;font-size:1.2rem;font-weight:700;border-radius:14px;border:2px solid var(--brd);background:var(--bg);color:var(--txt);outline:none;-moz-appearance:textfield;font-variant-numeric:tabular-nums}
+input{width:100%;height:50px;padding:12px 36px 12px 12px;font-size:1.2rem;font-weight:700;border-radius:14px;border:2px solid var(--brd);background:var(--bg);color:var(--txt);outline:none;-moz-appearance:textfield;font-variant-numeric:tabular-nums}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input:focus{border-color:var(--acc)}
 input.auto{border-style:dashed;opacity:.85}
 .u{position:absolute;right:12px;font-size:.9rem;font-weight:700;color:var(--mut);pointer-events:none}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:5px;border-radius:14px;margin-bottom:14px;height:44px}
-.tb{border:none;background:transparent;color:var(--mut);padding:0;height:34px;border-radius:10px;font-size:.86rem;font-weight:700;cursor:pointer;white-space:nowrap;overflow:hidden}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:5px;border-radius:14px;margin-bottom:14px;height:46px}
+.tb{border:none;background:transparent;color:var(--mut);padding:8px;border-radius:10px;font-size:.86rem;font-weight:700;cursor:pointer;white-space:nowrap}
 .tb.act{background:var(--card);color:var(--acc);box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.inline-ctrl{display:flex;align-items:center;justify-content:space-between;gap:10px;height:50px}
-.inline-ctrl.center{justify-content:center}
-.stepper{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.inline-ctrl{display:flex;align-items:center;justify-content:space-between;gap:10px;height:54px}
+.inline-ctrl.center-only{justify-content:center}
+.stepper{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .iw.compact{width:104px}
-.iw.compact input{padding:8px 32px 8px 10px;font-size:1.15rem;text-align:center}
+.iw.compact input{height:50px;padding:10px 32px 10px 10px;font-size:1.15rem;text-align:center}
 .iw.compact .u{right:10px;font-size:.85rem}
-.iw.time-box{width:146px;flex-shrink:0}
-.iw.time-box input{padding:8px 6px;font-size:1.32rem;text-align:center;width:100%}
+.iw.time-box{width:146px}
+.iw.time-box input{height:50px;padding:10px 8px;font-size:1.22rem;text-align:center}
 .arr-col{display:flex;flex-direction:column;gap:4px}
-.arr-btn{width:34px;height:23px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);border-radius:8px;font-size:.68rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
+.arr-btn{width:36px;height:24px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);border-radius:8px;font-size:.68rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
 .arr-btn:active{background:var(--soft);color:var(--acc);border-color:var(--acc)}
-.presets{display:flex;gap:6px;margin-top:12px;height:34px}
-.p-btn{flex:1;min-width:0;height:34px;padding:0 2px;border-radius:10px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);font-size:.8rem;font-weight:700;cursor:pointer;text-align:center;white-space:nowrap;overflow:hidden}
+.presets{display:flex;gap:6px;margin-top:12px;height:38px}
+.p-btn{flex:1;min-width:0;height:38px;padding:0 2px;border-radius:10px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);font-size:.8rem;font-weight:700;cursor:pointer;text-align:center;white-space:nowrap;overflow:hidden}
 .p-btn.act{background:var(--soft);color:var(--acc);border-color:var(--acc)}
 .p-btn:disabled{opacity:.35;pointer-events:none}
-.now-btn{background:var(--soft);color:var(--acc);border:none;border-radius:8px;height:26px;padding:0 9px;font-size:.7rem;font-weight:700;cursor:pointer;text-transform:uppercase;white-space:nowrap}
-.snd-btn{background:var(--bg);color:var(--mut);border:1px solid var(--brd);border-radius:8px;height:26px;width:30px;padding:0;font-size:.82rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.now-btn{background:var(--soft);color:var(--acc);border:none;border-radius:8px;height:24px;padding:0 9px;font-size:.72rem;font-weight:700;cursor:pointer;text-transform:uppercase;white-space:nowrap}
+.snd-btn{background:var(--bg);color:var(--mut);border:1px solid var(--brd);border-radius:8px;height:24px;width:30px;padding:0;font-size:.82rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .snd-btn.on{background:var(--soft);color:var(--acc);border-color:var(--acc)}
-.rc{border:2px solid var(--acc);height:192px;transition:height .2s ease,opacity .2s}.rc.active-mode{height:344px}.rc.wait{border-color:var(--brd);opacity:.65}
-.sb{background:var(--bg);padding:11px 8px;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;height:76px;min-width:0;overflow:hidden}
+.rc{border:2px solid var(--acc)}.rc.wait{border-color:var(--brd);opacity:.65}
+.sb{background:var(--bg);padding:12px 6px;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;height:94px;min-width:0;overflow:hidden}
 .sb.hi{background:var(--soft)}.rc.wait .sb.hi{background:var(--bg)}
-.sl{font-size:.65rem;color:var(--mut);font-weight:700;display:block;line-height:1.15;letter-spacing:-.01em;height:24px;overflow:hidden}
+.sl{font-size:.64rem;color:var(--mut);font-weight:700;display:block;line-height:1.15;letter-spacing:-.01em;overflow:hidden}
 .sl.up{text-transform:uppercase}
-.sv{font-size:1.14rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em;height:24px;line-height:24px;overflow:hidden}
+.sv{font-size:1.12rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em;overflow:hidden}
 .sb.hi .sv{color:var(--acc)}.rc.wait .sb.hi .sv{color:var(--mut)}
-.sv small{font-size:.72rem;font-weight:700;color:var(--acc);margin-left:2px}
-.action-btn{width:100%;margin-top:12px;padding:0 12px;border:none;border-radius:14px;background:var(--acc);color:#fff;font-size:.95rem;font-weight:800;cursor:pointer;letter-spacing:.02em;height:46px;white-space:nowrap;overflow:hidden}
+.sv small{font-size:.7rem;font-weight:700;color:var(--acc);margin-left:2px}
+.action-btn{width:100%;margin-top:12px;padding:0 13px;border:none;border-radius:14px;background:var(--acc);color:#fff;font-size:.95rem;font-weight:800;cursor:pointer;letter-spacing:.02em;height:50px;white-space:nowrap}
 .action-btn:disabled{opacity:.45;pointer-events:none}
 .action-btn.stop{background:#ef4444;color:#fff}
-.cd-box{margin-top:12px;padding:12px 10px;border-radius:14px;border:1px solid var(--acc);background:var(--soft);transition:background .2s,border-color .2s;height:140px;overflow:hidden}
+.cd-box{margin-top:12px;padding:12px;border-radius:14px;border:1px solid var(--acc);background:var(--soft);transition:background .2s,border-color .2s;height:160px;overflow:hidden}
 .cd-box.sched{border-color:var(--amb);background:var(--amb-soft)}
-.cd-top{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--acc);height:18px;margin-bottom:8px;overflow:hidden}
-.cd-top span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd-top{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--acc);height:18px;margin-bottom:8px;white-space:nowrap}
 .cd-box.sched .cd-top{color:var(--amb)}
-.cd-grid{display:grid;grid-template-columns:1.25fr 1fr 0.85fr;gap:6px;height:76px}
-.cd-cell{background:var(--card);padding:9px 6px;border-radius:11px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;height:76px;overflow:hidden}
-.cd-cl{font-size:.6rem;color:var(--mut);font-weight:700;text-transform:uppercase;line-height:1.15;height:22px;overflow:hidden}
-.cd-cv{font-size:1.05rem;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em;height:24px;line-height:24px;overflow:hidden}
-.cd-cell.main-cd .cd-cv{color:var(--acc);font-size:1.12rem}
-.cd-box.sched .cd-cell.main-cd .cd-cv{color:var(--amb)}
-.prog-bg{width:100%;height:6px;background:rgba(0,0,0,.1);border-radius:99px;margin-top:8px;overflow:hidden}
+.cd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;height:94px}
+.cd-cell{background:var(--card);border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;height:94px;min-width:0;overflow:hidden;border:1px solid rgba(16,185,129,.25)}
+.cd-box.sched .cd-cell{border-color:rgba(245,158,11,.3)}
+.cd-cell-lbl{font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--mut);line-height:1.15;letter-spacing:-.01em;white-space:nowrap}
+.cd-cell-val{font-size:1.06rem;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em}
+.cd-cell.main .cd-cell-val{color:var(--acc)}
+.cd-box.sched .cd-cell.main .cd-cell-val{color:var(--amb)}
+.prog-bg{width:100%;height:6px;background:rgba(0,0,0,.1);border-radius:99px;margin-top:10px;overflow:hidden}
 .prog-bar{height:100%;background:var(--acc);width:0%;transition:width .4s linear}
 .cd-box.sched .prog-bar{background:var(--amb)}
 .rst{background:none;border:none;color:var(--acc);font-size:.75rem;font-weight:700;cursor:pointer;text-transform:uppercase;padding:0 4px}
 .rst.mut{color:var(--mut)}
-.adm{text-align:center;margin-top:6px;height:30px}
+.adm{text-align:center;margin-top:6px}
 .adm-btn{background:none;border:none;color:var(--mut);font-size:.78rem;cursor:pointer;opacity:.65;padding:6px 12px;font-weight:600}
-#admBox{height:212px}
-.cg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.cg input{font-size:.95rem;padding:8px;height:40px}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.cg input{height:44px;font-size:.95rem;padding:8px}
 </style>
 </head>
 <body>
 <div class="app">
 <div class="hdr">
 <h1>CALCOLO TEMPO RICARICA</h1>
-<div class="sync-pill" id="syncPill"><span class="sync-dot"></span><span id="syncTxt">SYNC</span></div>
+<span class="live-badge off" id="liveBadge">OFFLINE</span>
 </div>
 
 <div class="card" id="cardCurrent">
@@ -138,14 +135,8 @@ input.auto{border-style:dashed;opacity:.85}
 </div>
 
 <div class="card dis" id="stepTime">
-<div class="ct">
-<span>ORARIO INIZIO RICARICA</span>
-<div class="ct-right">
-<button type="button" class="snd-btn" id="btnSndStart" onclick="toggleSound('start')" title="Avviso sonoro partenza ritardata">🔕</button>
-<button type="button" class="now-btn" id="btnNow" onclick="resetAutoTime()">Adesso</button>
-</div>
-</div>
-<div class="inline-ctrl center">
+<div class="ct"><span>ORARIO INIZIO RICARICA</span><div class="ct-actions"><button type="button" class="snd-btn" id="btnSndStart" onclick="toggleSound('start')" title="Avviso sonoro avvio">🔕</button><button type="button" class="now-btn" id="btnNow" onclick="setNow(true,true)">Adesso</button></div></div>
+<div class="inline-ctrl center-only">
 <div class="stepper">
 <div class="iw time-box"><input type="time" id="inTime"></div>
 <div class="arr-col">
@@ -157,12 +148,7 @@ input.auto{border-style:dashed;opacity:.85}
 </div>
 
 <div class="card rc wait" id="rc">
-<div class="ct">
-<span>Risultato Stimato</span>
-<div class="ct-right">
-<button type="button" class="snd-btn" id="btnSndEnd" onclick="toggleSound('end')" title="Avviso sonoro fine ricarica">🔕</button>
-</div>
-</div>
+<div class="ct"><span>Risultato Stimato</span><div class="ct-actions"><button type="button" class="snd-btn" id="btnSndEnd" onclick="toggleSound('end')" title="Avviso sonoro fine ricarica">🔕</button></div></div>
 <div class="row3">
 <div class="sb hi"><span class="sl up">TEMPO RICARICA</span><span class="sv" id="rt">--</span></div>
 <div class="sb"><span class="sl" id="rl">Autonomia finale (km)</span><span class="sv" id="rv">--</span></div>
@@ -170,11 +156,11 @@ input.auto{border-style:dashed;opacity:.85}
 </div>
 
 <div class="cd-box" id="cdBox" style="display:none">
-<div class="cd-top"><span id="cdLabel">RICARICA IN CORSO</span><span id="cdPerc"></span></div>
+<div class="cd-top"><span id="cdLabel">RICARICA IN CORSO</span><span id="cdRight"></span></div>
 <div class="cd-grid">
-<div class="cd-cell main-cd"><span class="cd-cl">TEMPO RIMANENTE</span><span class="cd-cv" id="cdTimer">00:00:00</span></div>
-<div class="cd-cell"><span class="cd-cl">AUTONOMIA km</span><span class="cd-cv" id="cdEstKm">-- km</span></div>
-<div class="cd-cell"><span class="cd-cl">AUTONOMIA %</span><span class="cd-cv" id="cdEstPerc">--%</span></div>
+<div class="cd-cell main"><span class="cd-cell-lbl">TEMPO RIMANENTE</span><span class="cd-cell-val" id="cdTimer">00:00:00</span></div>
+<div class="cd-cell"><span class="cd-cell-lbl">AUTONOMIA km</span><span class="cd-cell-val" id="cdEstKm">-- km</span></div>
+<div class="cd-cell"><span class="cd-cell-lbl">AUTONOMIA %</span><span class="cd-cell-val" id="cdEstPerc">--%</span></div>
 </div>
 <div class="prog-bg"><div class="prog-bar" id="progBar"></div></div>
 </div>
@@ -195,126 +181,199 @@ input.auto{border-style:dashed;opacity:.85}
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, onValue, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
   databaseURL: "https://ricarica-condivisa-default-rtdb.europe-west1.firebasedatabase.app"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const sharedRef = ref(db, "shared_state");
+const sharedRef = ref(db, "stato_condiviso");
+const connRef = ref(db, ".info/connected");
+const presenceListRef = ref(db, "utenti_online");
+const clientId = "u_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now();
+const myPresenceRef = ref(db, "utenti_online/" + clientId);
+
+let isConnected = false;
+let onlineCount = 0;
+
+function updateLiveBadge(){
+  const badge = document.getElementById('liveBadge');
+  if(!isConnected){
+    badge.textContent = 'OFFLINE';
+    badge.classList.add('off');
+  }else{
+    const n = Math.max(1, onlineCount);
+    badge.textContent = `LIVE ${n}/4`;
+    badge.classList.remove('off');
+  }
+}
+
+onValue(connRef, (snap) => {
+  isConnected = (snap.val() === true);
+  if(isConnected){
+    onDisconnect(myPresenceRef).remove();
+    set(myPresenceRef, true);
+  }
+  updateLiveBadge();
+});
+
+onValue(presenceListRef, (snap) => {
+  const val = snap.val();
+  onlineCount = val ? Object.keys(val).length : 0;
+  updateLiveBadge();
+});
+
+window.addEventListener('beforeunload', () => {
+  try { remove(myPresenceRef); } catch(e){}
+});
 
 const PIN='1234',STORE_KEY='ev_ricarica_setup',SESSION_KEY='ev_ricarica_session',SOUND_KEY='ev_ricarica_sounds';
 const DEFAULTS={cV:'14.21',cKP:'3.37',cPO:'4.21',cPK:'0.296'};
-let m='p',lastEdited=null,session=null,tickInterval=null,clockInterval=null,currentDurationH=0,manualTime=false;
+let m='p',lastEdited=null,session=null,tickInterval=null,currentDurationH=0,manualTime=false;
 let sounds={start:false,end:false};
-let alertedStart=false,alertedEnd=false,audioCtx=null;
-let isApplyingRemote=false,syncTimer=null;
+let isSyncingFromCloud=false;
 
-function setSyncStatus(ok, text){
-  const pill=document.getElementById('syncPill');
-  const txt=document.getElementById('syncTxt');
-  if(!pill||!txt) return;
-  pill.classList.toggle('err', !ok);
-  txt.textContent=text;
+function pushCloud(){
+  if(isSyncingFromCloud) return;
+  const payload = {
+    inKm: document.getElementById('inKm').value,
+    inPerc: document.getElementById('inPerc').value,
+    lastEdited: lastEdited,
+    mode: m,
+    tP: document.getElementById('tP').value,
+    tK: document.getElementById('tK').value,
+    inTime: document.getElementById('inTime').value,
+    manualTime: manualTime,
+    setup: {
+      cV: document.getElementById('cV').value,
+      cKP: document.getElementById('cKP').value,
+      cPO: document.getElementById('cPO').value,
+      cPK: document.getElementById('cPK').value
+    },
+    session: session || null,
+    updatedAt: Date.now()
+  };
+  try{ set(sharedRef, payload); }catch(e){}
 }
 
-function pushCloudState(){
-  if(isApplyingRemote) return;
-  clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>{
-    const payload={
-      inKm: elKm.value,
-      inPerc: elPerc.value,
-      lastEdited: lastEdited,
-      mode: m,
-      tP: document.getElementById('tP').value,
-      tK: document.getElementById('tK').value,
-      inTime: document.getElementById('inTime').value,
-      manualTime: manualTime,
-      setup: {
-        cV: document.getElementById('cV').value,
-        cKP: document.getElementById('cKP').value,
-        cPO: document.getElementById('cPO').value,
-        cPK: document.getElementById('cPK').value
-      },
-      session: session || null,
-      updatedAt: Date.now()
-    };
-    set(sharedRef, payload)
-      .then(()=>setSyncStatus(true, 'LIVE 4/4'))
-      .catch(()=>setSyncStatus(false, 'OFFLINE'));
-  }, 180);
-}
-
-function initAudio(){
+onValue(sharedRef, (snap) => {
+  const data = snap.val();
+  if(!data) return;
+  isSyncingFromCloud = true;
   try{
-    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended') audioCtx.resume();
-  }catch(e){}
-}
-
-function playAlert(type){
-  try{
-    if(navigator.vibrate){
-      navigator.vibrate(type==='end' ? [250,120,250,120,450] : [200,100,200]);
+    if(data.setup){
+      ['cV','cKP','cPO','cPK'].forEach(id=>{
+        if(data.setup[id]!==undefined && data.setup[id]!==''){
+          document.getElementById(id).value = data.setup[id];
+        }
+      });
+      saveSetup(false);
     }
-  }catch(e){}
-  try{
-    initAudio();
-    if(!audioCtx) return;
-    const now=audioCtx.currentTime;
-    const notes=type==='end' ? [523.25,659.25,783.99,1046.5] : [440,587.33];
-    notes.forEach((freq,i)=>{
-      const osc=audioCtx.createOscillator();
-      const gain=audioCtx.createGain();
-      osc.type='sine';
-      osc.frequency.setValueAtTime(freq,now+i*0.16);
-      gain.gain.setValueAtTime(0.001,now+i*0.16);
-      gain.gain.exponentialRampToValueAtTime(0.28,now+i*0.16+0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001,now+i*0.16+0.22);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now+i*0.16);
-      osc.stop(now+i*0.16+0.24);
-    });
-  }catch(e){}
-}
+    if(data.inKm !== undefined) document.getElementById('inKm').value = data.inKm;
+    if(data.inPerc !== undefined) document.getElementById('inPerc').value = data.inPerc;
+    lastEdited = data.lastEdited || null;
+    if(lastEdited==='km'){
+      document.getElementById('inPerc').classList.add('auto');
+      document.getElementById('inKm').classList.remove('auto');
+    }else if(lastEdited==='perc'){
+      document.getElementById('inKm').classList.add('auto');
+      document.getElementById('inPerc').classList.remove('auto');
+    }else{
+      document.getElementById('inKm').classList.remove('auto');
+      document.getElementById('inPerc').classList.remove('auto');
+    }
+
+    if(data.tP !== undefined) document.getElementById('tP').value = data.tP;
+    if(data.tK !== undefined) document.getElementById('tK').value = data.tK;
+
+    manualTime = !!data.manualTime;
+    if(data.inTime) document.getElementById('inTime').value = data.inTime;
+    else if(!manualTime) setNow(false, false);
+
+    m = data.mode || 'p';
+    document.getElementById('bP').classList.toggle('act', m==='p');
+    document.getElementById('bK').classList.toggle('act', m==='k');
+    document.getElementById('boxP').style.display = m==='p' ? 'block' : 'none';
+    document.getElementById('boxK').style.display = m==='k' ? 'block' : 'none';
+
+    if(data.session && data.session.startTs){
+      session = data.session;
+      saveSession(false);
+      applySessionUI(true);
+      startTick();
+    }else{
+      session = null;
+      localStorage.removeItem(SESSION_KEY);
+      clearInterval(tickInterval);
+      applySessionUI(false);
+      if(!manualTime) setNow(false, false);
+    }
+    calc(false, false);
+  }finally{
+    isSyncingFromCloud = false;
+  }
+});
 
 function loadSounds(){
   try{
-    const saved=JSON.parse(localStorage.getItem(SOUND_KEY));
-    if(saved) sounds={start:!!saved.start,end:!!saved.end};
+    const s=JSON.parse(localStorage.getItem(SOUND_KEY));
+    if(s) sounds={start:!!s.start,end:!!s.end};
   }catch(e){}
-  updateSoundButtons();
+  updateSoundUI();
 }
-
 function saveSounds(){
   try{ localStorage.setItem(SOUND_KEY,JSON.stringify(sounds)); }catch(e){}
 }
-
-function updateSoundButtons(){
+function updateSoundUI(){
   const bS=document.getElementById('btnSndStart');
   const bE=document.getElementById('btnSndEnd');
-  if(bS){
-    bS.classList.toggle('on',sounds.start);
-    bS.textContent=sounds.start?'🔔':'🔕';
-  }
-  if(bE){
-    bE.classList.toggle('on',sounds.end);
-    bE.textContent=sounds.end?'🔔':'🔕';
+  bS.classList.toggle('on',sounds.start);
+  bS.textContent=sounds.start?'🔔':'🔕';
+  bE.classList.toggle('on',sounds.end);
+  bE.textContent=sounds.end?'🔔':'🔕';
+}
+function toggleSound(type){
+  sounds[type]=!sounds[type];
+  saveSounds();
+  updateSoundUI();
+  if(sounds[type]) playTone(type==='start'?660:880, 140);
+}
+function playTone(freq, dur){
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx) return;
+    const ctx=new Ctx();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.type='sine';
+    osc.frequency.value=freq;
+    gain.gain.setValueAtTime(0.18,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur/1000);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime+dur/1000);
+  }catch(e){}
+}
+function triggerAlert(type){
+  if(!sounds[type]) return;
+  try{
+    if(navigator.vibrate){
+      navigator.vibrate(type==='start'?[250,120,250]:[400,150,400,150,600]);
+    }
+  }catch(e){}
+  if(type==='start'){
+    playTone(587.33, 200);
+    setTimeout(()=>playTone(880, 320), 230);
+  }else{
+    playTone(523.25, 180);
+    setTimeout(()=>playTone(659.25, 180), 200);
+    setTimeout(()=>playTone(783.99, 180), 400);
+    setTimeout(()=>playTone(1046.50, 420), 600);
   }
 }
-
-window.toggleSound=function(which){
-  initAudio();
-  sounds[which]=!sounds[which];
-  saveSounds();
-  updateSoundButtons();
-  if(sounds[which]) playAlert(which);
-};
 
 function loadSetup(){
   try{
@@ -327,24 +386,24 @@ function loadSetup(){
   }catch(e){}
 }
 
-function saveSetup(){
+function saveSetup(sync=true){
   try{
     const data={};
     ['cV','cKP','cPO','cPK'].forEach(id=>{ data[id]=document.getElementById(id).value; });
     localStorage.setItem(STORE_KEY,JSON.stringify(data));
   }catch(e){}
+  if(sync) pushCloud();
 }
 
-window.resetSetup=function(){
+function resetSetup(){
   if(confirm('Ripristinare i parametri predefiniti calibrati?')){
     ['cV','cKP','cPO','cPK'].forEach(id=>{ document.getElementById(id).value=DEFAULTS[id]; });
-    saveSetup();
+    saveSetup(false);
     if(lastEdited==='km') syncFromKm();
     else if(lastEdited==='perc') syncFromPerc();
-    calc(true);
-    pushCloudState();
+    calc(true, true);
   }
-};
+}
 
 function cleanInt(el){ el.value=el.value.replace(/[^0-9]/g,''); }
 function round5(n){ return Math.round(n/5)*5; }
@@ -380,28 +439,26 @@ function bindHold(btnId, fn){
   btn.addEventListener('touchcancel',clear);
 }
 
-function setNow(recalc=true){
+function setNow(recalc=true, sync=false){
+  manualTime=false;
   const now=new Date();
   const hh=String(now.getHours()).padStart(2,'0');
   const mm=String(now.getMinutes()).padStart(2,'0');
   document.getElementById('inTime').value=`${hh}:${mm}`;
-  if(recalc) calc(true);
+  if(recalc) calc(true, sync);
+  else if(sync) pushCloud();
 }
 
-window.resetAutoTime=function(){
-  manualTime=false;
-  setNow(true);
-  pushCloudState();
-};
-
-function startAutoClock(){
-  clearInterval(clockInterval);
-  clockInterval=setInterval(()=>{
-    if(!session && !manualTime){
-      setNow(true);
+setInterval(()=>{
+  if(!session && !manualTime && document.activeElement!==document.getElementById('inTime')){
+    const now=new Date();
+    const curVal=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    if(document.getElementById('inTime').value!==curVal){
+      document.getElementById('inTime').value=curVal;
+      calc(false, false);
     }
-  },30000);
-}
+  }
+},30000);
 
 function stepTime(delta){
   if(session) return;
@@ -415,12 +472,14 @@ function stepTime(delta){
     tot=(tot%5===0)?tot+5:Math.ceil(tot/5)*5;
   }else{
     tot=(tot%5===0)?tot-5:Math.floor(tot/5)*5;
-    if(tot<nowTot) tot=nowTot;
+    if(tot<nowTot){
+      tot=nowTot;
+      manualTime=false;
+    }
   }
   tot=((tot%1440)+1440)%1440;
   el.value=`${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`;
-  calc(true);
-  pushCloudState();
+  calc(true, true);
 }
 
 function stepTarget(type, delta){
@@ -437,8 +496,7 @@ function stepTarget(type, delta){
   if(next<minVal) next=minVal;
   if(next>maxVal) next=maxVal;
   el.value=next;
-  calc(true);
-  pushCloudState();
+  calc(true, true);
 }
 
 function syncFromKm(){
@@ -466,39 +524,42 @@ function syncFromPerc(){
 
 const elKm=document.getElementById('inKm'),elPerc=document.getElementById('inPerc');
 elKm.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); if(e.key==='Enter') elKm.blur(); });
-elKm.addEventListener('input',()=>{ cleanInt(elKm); lastEdited='km'; syncFromKm(); calc(false); pushCloudState(); });
-elKm.addEventListener('blur',()=>{ calc(true); pushCloudState(); });
+elKm.addEventListener('input',()=>{ cleanInt(elKm); lastEdited='km'; syncFromKm(); calc(false, true); });
+elKm.addEventListener('blur',()=>calc(true, true));
 
 elPerc.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); if(e.key==='Enter') elPerc.blur(); });
-elPerc.addEventListener('input',()=>{ cleanInt(elPerc); lastEdited='perc'; syncFromPerc(); calc(false); pushCloudState(); });
-elPerc.addEventListener('blur',()=>{ calc(true); pushCloudState(); });
+elPerc.addEventListener('input',()=>{ cleanInt(elPerc); lastEdited='perc'; syncFromPerc(); calc(false, true); });
+elPerc.addEventListener('blur',()=>calc(true, true));
 
 ['tP','tK'].forEach(id=>{
   const el=document.getElementById(id);
   el.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); if(e.key==='Enter') el.blur(); });
-  el.addEventListener('input',()=>{ cleanInt(el); calc(false); pushCloudState(); });
+  el.addEventListener('input',()=>{ cleanInt(el); calc(false, true); });
   el.addEventListener('blur',()=>{
     const minVal=+el.min||0, maxVal=+el.max||9999;
     let val=round5(+el.value||0);
     if(val<minVal) val=minVal;
     if(val>maxVal) val=maxVal;
     el.value=val;
-    calc(true);
-    pushCloudState();
+    calc(true, true);
   });
 });
 
 document.getElementById('inTime').addEventListener('change',()=>{
-  manualTime=true;
   const el=document.getElementById('inTime');
   const now=new Date();
   const nowTot=now.getHours()*60+now.getMinutes();
   if(el.value){
     const [h,min]=el.value.split(':').map(Number);
-    if(h*60+min < nowTot) resetAutoTime();
+    if(h*60+min <= nowTot){
+      setNow(false, false);
+    }else{
+      manualTime=true;
+    }
+  }else{
+    setNow(false, false);
   }
-  calc(true);
-  pushCloudState();
+  calc(true, true);
 });
 
 ['cV','cKP','cPO','cPK'].forEach(id=>{
@@ -506,11 +567,10 @@ document.getElementById('inTime').addEventListener('change',()=>{
   el.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); });
   el.addEventListener('input',()=>{
     if(+el.value<0) el.value=Math.abs(+el.value);
-    saveSetup();
+    saveSetup(false);
     if(lastEdited==='km') syncFromKm();
     else if(lastEdited==='perc') syncFromPerc();
-    calc(true);
-    pushCloudState();
+    calc(true, true);
   });
 });
 
@@ -521,17 +581,16 @@ bindHold('dnK',()=>stepTarget('k',-5));
 bindHold('upT',()=>stepTime(5));
 bindHold('dnT',()=>stepTime(-5));
 
-window.unlock=function(){ if(prompt('Inserisci codice PIN:')===PIN) document.getElementById('admBox').style.display='block'; };
-window.lock=function(){ document.getElementById('admBox').style.display='none'; };
-window.mode=function(x){
+function unlock(){ if(prompt('Inserisci codice PIN:')===PIN) document.getElementById('admBox').style.display='block'; }
+function lock(){ document.getElementById('admBox').style.display='none'; }
+function mode(x){
   m=x;
   document.getElementById('bP').classList.toggle('act',x==='p');
   document.getElementById('bK').classList.toggle('act',x==='k');
   document.getElementById('boxP').style.display=x==='p'?'block':'none';
   document.getElementById('boxK').style.display=x==='k'?'block':'none';
-  calc(true);
-  pushCloudState();
-};
+  calc(true, true);
+}
 
 function fmt(h){
   if(h<=0) return "0h 00m";
@@ -560,20 +619,26 @@ function calcEndTime(h){
 }
 
 function buildStartTimestamp(){
-  const val=document.getElementById('inTime').value;
   const now=new Date();
+  if(!manualTime){
+    setNow(false, false);
+    return now.getTime();
+  }
+  const val=document.getElementById('inTime').value;
   const [hh,mm]=val.split(':').map(Number);
   const dt=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0,0);
-  if(dt.getTime() < now.getTime() - 60000) dt.setDate(dt.getDate()+1);
+  if(dt.getTime() <= now.getTime()){
+    setNow(false, false);
+    return now.getTime();
+  }
   return dt.getTime();
 }
 
-window.setPreset=function(val){
+function setPreset(val){
   const el=document.getElementById(m==='p'?'tP':'tK');
   el.value=val;
-  calc(true);
-  pushCloudState();
-};
+  calc(true, true);
+}
 
 function updatePresets(ka,pa,maxKm,curVal){
   if(m==='p'){
@@ -591,7 +656,7 @@ function updatePresets(ka,pa,maxKm,curVal){
   }
 }
 
-function calc(enforceMin=false){
+function calc(enforceMin=false, sync=false){
   const rc=document.getElementById('rc'),s2=document.getElementById('step2'),st=document.getElementById('stepTime'),btnAct=document.getElementById('btnAction');
   const {v,kp,pk}=getParams();
 
@@ -603,6 +668,7 @@ function calc(enforceMin=false){
     document.getElementById('rt').textContent='--';
     document.getElementById('rf').textContent='--';
     currentDurationH=0;
+    if(sync) pushCloud();
     return;
   }
 
@@ -644,45 +710,36 @@ function calc(enforceMin=false){
     updatePresets(ka,pa,maxKm,tk);
   }
 
-  if(session && !isApplyingRemote){
-    const prevEnd=session.startTs + session.durationMs;
+  if(session){
     session.mode=m;
     session.tP=document.getElementById('tP').value;
     session.tK=document.getElementById('tK').value;
     session.durationMs=Math.round(currentDurationH*3600000);
-    if(session.startTs + session.durationMs > Date.now() && prevEnd <= Date.now()){
-      alertedEnd=false;
-    }
-    saveSession();
+    if(session.startTs + session.durationMs > Date.now()) session.endAlerted=false;
+    saveSession(false);
     renderCountdown();
   }
+  if(sync) pushCloud();
 }
 
-function saveSession(){
+function saveSession(sync=false){
   try{ localStorage.setItem(SESSION_KEY,JSON.stringify(session)); }catch(e){}
+  if(sync) pushCloud();
 }
 
-window.toggleSession=function(){
-  initAudio();
+function toggleSession(){
   if(session){
-    if(!confirm('Terminare la ricarica in corso per tutti?')) return;
+    if(!confirm('Terminare la ricarica in corso?')) return;
     session=null;
-    alertedStart=false;
-    alertedEnd=false;
     localStorage.removeItem(SESSION_KEY);
     clearInterval(tickInterval);
     applySessionUI(false);
-    manualTime=false;
-    setNow(true);
-    pushCloudState();
+    setNow(true, true);
   }else{
     if(elKm.value===''||elPerc.value==='') return;
-    if(!manualTime){
-      setNow(true);
-    }
     const startTs=buildStartTimestamp();
-    alertedStart=(Date.now()>=startTs);
-    alertedEnd=false;
+    calc(true, false);
+    const isSched=(startTs > Date.now() + 1000);
     session={
       inKm:elKm.value,
       inPerc:elPerc.value,
@@ -691,33 +748,31 @@ window.toggleSession=function(){
       tP:document.getElementById('tP').value,
       tK:document.getElementById('tK').value,
       startTs:startTs,
-      durationMs:Math.round(currentDurationH*3600000)
+      durationMs:Math.round(currentDurationH*3600000),
+      startAlerted:!isSched,
+      endAlerted:false
     };
-    saveSession();
+    saveSession(true);
     applySessionUI(true);
     startTick();
-    pushCloudState();
   }
-};
+}
 
 function applySessionUI(active){
   const btn=document.getElementById('btnAction');
   const cdBox=document.getElementById('cdBox');
-  const rcCard=document.getElementById('rc');
   const cardCur=document.getElementById('cardCurrent');
   const stepTime=document.getElementById('stepTime');
   if(active){
     btn.textContent='Termina Ricarica';
     btn.classList.add('stop');
     cdBox.style.display='block';
-    rcCard.classList.add('active-mode');
     cardCur.classList.add('dis');
     stepTime.classList.add('dis');
   }else{
     btn.textContent='Avvia / Conferma Ricarica';
     btn.classList.remove('stop');
     cdBox.style.display='none';
-    rcCard.classList.remove('active-mode');
     cardCur.classList.remove('dis');
     stepTime.classList.remove('dis');
   }
@@ -734,7 +789,7 @@ function renderCountdown(){
   const now=Date.now();
   const cdBox=document.getElementById('cdBox');
   const lbl=document.getElementById('cdLabel');
-  const pctEl=document.getElementById('cdPerc');
+  const rightEl=document.getElementById('cdRight');
   const timerEl=document.getElementById('cdTimer');
   const estKmEl=document.getElementById('cdEstKm');
   const estPercEl=document.getElementById('cdEstPerc');
@@ -746,8 +801,8 @@ function renderCountdown(){
 
   if(now < session.startTs){
     cdBox.classList.add('sched');
-    lbl.textContent='AVVIO PROGRAMMATO TRA:';
-    pctEl.textContent='ORE '+session.inTime;
+    lbl.textContent='AVVIO PROGRAMMATO';
+    rightEl.textContent='ORE '+session.inTime;
     timerEl.textContent=fmtCd(session.startTs - now);
     estKmEl.textContent=`${Math.round(ka)} km`;
     estPercEl.textContent=`${Math.round(pa)}%`;
@@ -755,12 +810,14 @@ function renderCountdown(){
     return;
   }
 
-  if(!alertedStart){
-    alertedStart=true;
-    if(sounds.start) playAlert('start');
+  if(!session.startAlerted){
+    session.startAlerted=true;
+    saveSession(false);
+    triggerAlert('start');
   }
 
   cdBox.classList.remove('sched');
+  rightEl.textContent='';
   const endTs=session.startTs + session.durationMs;
   const rem=endTs - now;
   const elapsedH=Math.max(0,(now - session.startTs)/3600000);
@@ -777,14 +834,14 @@ function renderCountdown(){
 
   if(rem <= 0){
     lbl.textContent='RICARICA COMPLETATA';
-    pctEl.textContent='';
     timerEl.textContent='00:00:00';
     estKmEl.textContent=`${Math.round(targetKm)} km`;
     estPercEl.textContent=`${Math.round(targetPerc)}%`;
     bar.style.width='100%';
-    if(!alertedEnd){
-      alertedEnd=true;
-      if(sounds.end) playAlert('end');
+    if(!session.endAlerted){
+      session.endAlerted=true;
+      saveSession(false);
+      triggerAlert('end');
     }
     return;
   }
@@ -794,68 +851,10 @@ function renderCountdown(){
   const percDone=session.durationMs>0 ? Math.min(100,Math.max(0,Math.round(((now-session.startTs)/session.durationMs)*100))) : 100;
 
   lbl.textContent='RICARICA IN CORSO';
-  pctEl.textContent='';
   timerEl.textContent=fmtCd(rem);
   estKmEl.textContent=`~${Math.round(curKm)} km`;
   estPercEl.textContent=`~${Math.round(curPerc)}%`;
   bar.style.width=percDone+'%';
-}
-
-function applyRemoteState(data){
-  isApplyingRemote=true;
-  try{
-    if(data.setup){
-      ['cV','cKP','cPO','cPK'].forEach(id=>{
-        if(data.setup[id]!==undefined && data.setup[id]!==''){
-          document.getElementById(id).value=data.setup[id];
-        }
-      });
-      saveSetup();
-    }
-
-    if(data.inKm!==undefined && document.activeElement!==elKm) elKm.value=data.inKm;
-    if(data.inPerc!==undefined && document.activeElement!==elPerc) elPerc.value=data.inPerc;
-    lastEdited=data.lastEdited||null;
-    if(lastEdited==='km'){ elPerc.classList.add('auto'); elKm.classList.remove('auto'); }
-    else if(lastEdited==='perc'){ elKm.classList.add('auto'); elPerc.classList.remove('auto'); }
-
-    if(data.tP!==undefined && document.activeElement!==document.getElementById('tP')) document.getElementById('tP').value=data.tP;
-    if(data.tK!==undefined && document.activeElement!==document.getElementById('tK')) document.getElementById('tK').value=data.tK;
-
-    manualTime=!!data.manualTime;
-    if(data.inTime && document.activeElement!==document.getElementById('inTime')){
-      document.getElementById('inTime').value=data.inTime;
-    }
-
-    m=data.mode||'p';
-    document.getElementById('bP').classList.toggle('act',m==='p');
-    document.getElementById('bK').classList.toggle('act',m==='k');
-    document.getElementById('boxP').style.display=m==='p'?'block':'none';
-    document.getElementById('boxK').style.display=m==='k'?'block':'none';
-
-    if(data.session && data.session.startTs){
-      const isNewSession=!session || session.startTs!==data.session.startTs;
-      session=data.session;
-      saveSession();
-      if(isNewSession){
-        alertedStart=(Date.now()>=session.startTs);
-        alertedEnd=(Date.now()>=(session.startTs+session.durationMs));
-      }
-      applySessionUI(true);
-      calc(false);
-      startTick();
-    }else{
-      if(session){
-        session=null;
-        localStorage.removeItem(SESSION_KEY);
-        clearInterval(tickInterval);
-        applySessionUI(false);
-      }
-      calc(false);
-    }
-  }finally{
-    isApplyingRemote=false;
-  }
 }
 
 function loadSession(){
@@ -863,8 +862,6 @@ function loadSession(){
     const saved=JSON.parse(localStorage.getItem(SESSION_KEY));
     if(saved && saved.startTs){
       session=saved;
-      alertedStart=(Date.now()>=session.startTs);
-      alertedEnd=(Date.now()>=(session.startTs+session.durationMs));
       elKm.value=session.inKm;
       elPerc.value=session.inPerc;
       document.getElementById('inTime').value=session.inTime;
@@ -876,7 +873,6 @@ function loadSession(){
       document.getElementById('boxP').style.display=m==='p'?'block':'none';
       document.getElementById('boxK').style.display=m==='k'?'block':'none';
       applySessionUI(true);
-      calc(false);
       startTick();
       return true;
     }
@@ -884,23 +880,21 @@ function loadSession(){
   return false;
 }
 
-loadSetup();
-loadSounds();
-if(!loadSession()){
-  setNow(false);
-  calc(false);
-}
-startAutoClock();
+window.mode=mode;
+window.setNow=setNow;
+window.toggleSound=toggleSound;
+window.toggleSession=toggleSession;
+window.unlock=unlock;
+window.lock=lock;
+window.resetSetup=resetSetup;
+window.setPreset=setPreset;
 
-onValue(sharedRef, (snapshot)=>{
-  setSyncStatus(true, 'LIVE 4/4');
-  const val=snapshot.val();
-  if(val){
-    applyRemoteState(val);
-  }
-}, ()=>{
-  setSyncStatus(false, 'OFFLINE');
-});
+loadSounds();
+loadSetup();
+if(!loadSession()){
+  setNow(false, false);
+  calc(false, false);
+}
 </script>
 </body>
 </html>
