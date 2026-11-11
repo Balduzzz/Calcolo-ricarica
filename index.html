@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ricarica EV">
+<title>CALCOLO TEMPO RICARICA</title>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--txt:#111827;--mut:#6b7280;--acc:#10b981;--soft:#d1fae5;--brd:#e5e7eb;--amb:#f59e0b;--amb-soft:rgba(245,158,11,.15)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--card:#1e293b;--txt:#f8fafc;--mut:#94a3b8;--acc:#34d399;--soft:rgba(52,211,153,.15);--brd:#334155;--amb:#fbbf24;--amb-soft:rgba(251,191,36,.15)}}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,sans-serif;-webkit-tap-highlight-color:transparent}
+body{margin:0;padding:18px 14px;background:var(--bg);color:var(--txt);display:flex;justify-content:center}
+.app{width:100%;max-width:420px}
+h1{font-size:1.3rem;margin:0 0 14px;font-weight:800;letter-spacing:-.01em;height:28px;line-height:28px}
+.card{background:var(--card);border-radius:20px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.06);margin-bottom:14px;border:1px solid var(--brd);transition:opacity .2s;overflow:hidden}
+.card.dis{opacity:.45;pointer-events:none}
+#cardCurrent{height:112px}
+#step2{height:212px}
+#stepTime{height:118px}
+.ct{font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;height:26px}
+.ct-actions{display:flex;align-items:center;gap:6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;height:50px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;height:76px}
+label{display:block;font-size:.82rem;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iw{position:relative;display:flex;align-items:center;height:50px}
+input{width:100%;height:50px;padding:12px 36px 12px 12px;font-size:1.2rem;font-weight:700;border-radius:14px;border:2px solid var(--brd);background:var(--bg);color:var(--txt);outline:none;-moz-appearance:textfield;font-variant-numeric:tabular-nums}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input:focus{border-color:var(--acc)}
+input.auto{border-style:dashed;opacity:.85}
+.u{position:absolute;right:12px;font-size:.9rem;font-weight:700;color:var(--mut);pointer-events:none}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:5px;border-radius:14px;margin-bottom:12px;height:44px}
+.tb{border:none;background:transparent;color:var(--mut);padding:0;height:34px;border-radius:10px;font-size:.86rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.tb.act{background:var(--card);color:var(--acc);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.inline-ctrl{display:flex;align-items:center;justify-content:space-between;gap:10px;height:50px}
+.time-center{display:flex;align-items:center;justify-content:center;height:50px}
+.stepper{display:flex;align-items:center;gap:8px;flex-shrink:0;height:50px}
+.iw.compact{width:104px;height:50px}
+.iw.compact input{padding:10px 32px 10px 10px;font-size:1.15rem;text-align:center;height:50px}
+.iw.compact .u{right:10px;font-size:.85rem}
+.iw.time-box{width:146px;height:50px;flex-shrink:0}
+.iw.time-box input{padding:10px 8px;font-size:1.25rem;text-align:center;height:50px;width:100%}
+.arr-col{display:flex;flex-direction:column;gap:4px;height:50px;justify-content:center}
+.arr-btn{width:38px;height:23px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);border-radius:8px;font-size:.68rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
+.arr-btn:active{background:var(--soft);color:var(--acc);border-color:var(--acc)}
+.presets{display:flex;flex-wrap:nowrap;gap:5px;margin-top:10px;height:34px}
+.p-btn{flex:1;min-width:0;height:34px;padding:0 2px;border-radius:10px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);font-size:.8rem;font-weight:700;cursor:pointer;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-btn.act{background:var(--soft);color:var(--acc);border-color:var(--acc)}
+.p-btn:disabled{opacity:.35;pointer-events:none}
+.now-btn{background:var(--soft);color:var(--acc);border:none;border-radius:8px;height:26px;padding:0 9px;font-size:.72rem;font-weight:700;cursor:pointer;text-transform:uppercase;white-space:nowrap}
+.sound-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:26px;padding:0;border-radius:8px;border:1px solid var(--brd);background:var(--bg);color:var(--mut);font-size:.9rem;cursor:pointer;transition:all .15s}
+.sound-btn.on{background:var(--soft);color:var(--acc);border-color:var(--acc)}
+.rc{border:2px solid var(--acc)}.rc.wait{border-color:var(--brd);opacity:.65}
+.sb{background:var(--bg);padding:10px 6px;border-radius:14px;display:flex;flex-direction:column;justify-content:space-between;height:76px;min-width:0;overflow:hidden}
+.sb.hi{background:var(--soft)}.rc.wait .sb.hi{background:var(--bg)}
+.sl{font-size:.63rem;color:var(--mut);font-weight:700;display:block;line-height:1.15;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl.up{text-transform:uppercase}
+.sv{font-size:1.14rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis}
+.sb.hi .sv{color:var(--acc)}.rc.wait .sb.hi .sv{color:var(--mut)}
+.sv small{font-size:.72rem;font-weight:700;color:var(--acc);margin-left:2px}
+.action-btn{width:100%;margin-top:12px;padding:0 13px;border:none;border-radius:14px;background:var(--acc);color:#fff;font-size:.95rem;font-weight:800;cursor:pointer;letter-spacing:.02em;height:46px;white-space:nowrap}
+.action-btn:disabled{opacity:.45;pointer-events:none}
+.action-btn.stop{background:#ef4444;color:#fff}
+.cd-box{margin-top:12px;padding:12px;border-radius:14px;border:1px solid var(--acc);background:var(--soft);transition:background .2s,border-color .2s;height:142px;overflow:hidden}
+.cd-box.sched{border-color:var(--amb);background:var(--amb-soft)}
+.cd-top{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--acc);height:18px;margin-bottom:8px;white-space:nowrap}
+.cd-box.sched .cd-top{color:var(--amb)}
+.cd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;height:76px}
+.cd-item{background:var(--card);padding:10px 6px;border-radius:12px;display:flex;flex-direction:column;justify-content:space-between;height:76px;min-width:0;overflow:hidden;border:1px solid rgba(16,185,129,.25)}
+.cd-box.sched .cd-item{border-color:rgba(245,158,11,.25)}
+.cd-item.main{border-color:var(--acc)}
+.cd-box.sched .cd-item.main{border-color:var(--amb)}
+.cd-il{font-size:.63rem;color:var(--mut);font-weight:700;text-transform:uppercase;line-height:1.15;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cd-iv{font-size:1.1rem;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis}
+.cd-item.main .cd-iv{color:var(--acc)}
+.cd-box.sched .cd-item.main .cd-iv{color:var(--amb)}
+.prog-bg{width:100%;height:6px;background:rgba(0,0,0,.1);border-radius:99px;margin-top:10px;overflow:hidden}
+.prog-bar{height:100%;background:var(--acc);width:0%;transition:width .4s linear}
+.cd-box.sched .prog-bar{background:var(--amb)}
+.rst{background:none;border:none;color:var(--acc);font-size:.75rem;font-weight:700;cursor:pointer;text-transform:uppercase;padding:0 4px}
+.rst.mut{color:var(--mut)}
+.adm{text-align:center;margin-top:6px;height:30px}
+.adm-btn{background:none;border:none;color:var(--mut);font-size:.78rem;cursor:pointer;opacity:.65;padding:6px 12px;font-weight:600}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.cg input{font-size:.95rem;padding:8px;height:40px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>CALCOLO TEMPO RICARICA</h1>
+
+<div class="card" id="cardCurrent">
+<div class="ct"><span>AUTONOMIA ATTUALE</span></div>
+<div class="row">
+<div class="iw"><input type="number" id="inKm" min="0" inputmode="numeric" pattern="[0-9]*" autofocus><span class="u">km</span></div>
+<div class="iw"><input type="number" id="inPerc" min="0" max="100" inputmode="numeric" pattern="[0-9]*"><span class="u">%</span></div>
+</div>
+</div>
+
+<div class="card dis" id="step2">
+<div class="ct"><span>IMPOSTA OBIETTIVO</span></div>
+<div class="tabs">
+<button type="button" class="tb act" id="bP" onclick="mode('p')">Obiettivo in %</button>
+<button type="button" class="tb" id="bK" onclick="mode('k')">Obiettivo in km</button>
+</div>
+<div id="boxP">
+<div class="inline-ctrl">
+<label for="tP">Percentuale desiderata</label>
+<div class="stepper">
+<div class="iw compact"><input type="number" id="tP" value="80" min="0" max="100" inputmode="numeric" pattern="[0-9]*"><span class="u">%</span></div>
+<div class="arr-col">
+<button type="button" class="arr-btn" id="upP">▲</button>
+<button type="button" class="arr-btn" id="dnP">▼</button>
+</div>
+</div>
+</div>
+<div class="presets" id="preP"></div>
+</div>
+<div id="boxK" style="display:none">
+<div class="inline-ctrl">
+<label for="tK">Autonomia desiderata</label>
+<div class="stepper">
+<div class="iw compact"><input type="number" id="tK" value="280" min="0" inputmode="numeric" pattern="[0-9]*"><span class="u">km</span></div>
+<div class="arr-col">
+<button type="button" class="arr-btn" id="upK">▲</button>
+<button type="button" class="arr-btn" id="dnK">▼</button>
+</div>
+</div>
+</div>
+<div class="presets" id="preK"></div>
+</div>
+</div>
+
+<div class="card dis" id="stepTime">
+<div class="ct">
+<span>ORARIO INIZIO RICARICA</span>
+<div class="ct-actions">
+<button type="button" class="sound-btn" id="btnSndStart" onclick="toggleSound('start')" title="Avviso sonoro partenza ritardata">🔕</button>
+<button type="button" class="now-btn" id="btnNow" onclick="setNow(true, true)">Adesso</button>
+</div>
+</div>
+<div class="time-center">
+<div class="stepper">
+<div class="iw time-box"><input type="time" id="inTime"></div>
+<div class="arr-col">
+<button type="button" class="arr-btn" id="upT">▲</button>
+<button type="button" class="arr-btn" id="dnT">▼</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="card rc wait" id="rc">
+<div class="ct">
+<span>Risultato Stimato</span>
+<div class="ct-actions">
+<button type="button" class="sound-btn" id="btnSndEnd" onclick="toggleSound('end')" title="Avviso sonoro fine ricarica">🔕</button>
+</div>
+</div>
+<div class="row3">
+<div class="sb hi"><span class="sl up">TEMPO RICARICA</span><span class="sv" id="rt">--</span></div>
+<div class="sb"><span class="sl" id="rl">Autonomia finale (km)</span><span class="sv" id="rv">--</span></div>
+<div class="sb"><span class="sl">Orario fine ricarica</span><span class="sv" id="rf">--</span></div>
+</div>
+
+<div class="cd-box" id="cdBox" style="display:none">
+<div class="cd-top"><span id="cdLabel">RICARICA IN CORSO</span><span id="cdPerc"></span></div>
+<div class="cd-grid">
+<div class="cd-item main"><span class="cd-il">TEMPO RIMANENTE</span><span class="cd-iv" id="cdTimer">00:00:00</span></div>
+<div class="cd-item"><span class="cd-il">AUTONOMIA km</span><span class="cd-iv" id="cdEstKm">-- km</span></div>
+<div class="cd-item"><span class="cd-il">AUTONOMIA %</span><span class="cd-iv" id="cdEstPerc">--%</span></div>
+</div>
+<div class="prog-bg"><div class="prog-bar" id="progBar"></div></div>
+</div>
+
+<button type="button" class="action-btn" id="btnAction" onclick="toggleSession()" disabled>Avvia / Conferma Ricarica</button>
+</div>
+
+<div class="adm"><button type="button" class="adm-btn" onclick="unlock()">🔒 Setup</button></div>
+<div class="card" id="admBox" style="display:none">
+<div class="ct"><span>Setup</span><div><button type="button" class="rst mut" onclick="resetSetup()">Reset</button> • <button type="button" class="rst" onclick="lock()">Blocca</button></div></div>
+<div class="cg">
+<div><label>Velocità (km/h)</label><input type="number" id="cV" value="14.21" min="0.1" step="0.01" inputmode="decimal"></div>
+<div><label>km per 1%</label><input type="number" id="cKP" value="3.37" min="0.1" step="0.01" inputmode="decimal"></div>
+<div><label>% per ora</label><input type="number" id="cPO" value="4.21" min="0.01" step="0.01" inputmode="decimal"></div>
+<div><label>% per km</label><input type="number" id="cPK" value="0.296" min="0.001" step="0.001" inputmode="decimal"></div>
+</div>
+</div>
+</div>
+
+<script>
+const PIN='1234',STORE_KEY='ev_ricarica_setup',SESSION_KEY='ev_ricarica_session',SOUND_KEY='ev_ricarica_sounds';
+const DEFAULTS={cV:'14.21',cKP:'3.37',cPO:'4.21',cPK:'0.296'};
+let m='p',lastEdited=null,session=null,tickInterval=null,currentDurationH=0,manualTime=false,audioCtx=null;
+let soundPrefs={start:false,end:false};
+
+function initAudio(){
+  try{
+    if(!audioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(AC) audioCtx=new AC();
+    }
+    if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+  }catch(e){}
+}
+
+function playAlert(type){
+  initAudio();
+  try{
+    if(navigator.vibrate){
+      if(type==='start') navigator.vibrate([250,120,250]);
+      else navigator.vibrate([400,150,400,150,600]);
+    }
+  }catch(e){}
+  try{
+    if(!audioCtx) return;
+    const now=audioCtx.currentTime;
+    const notes=type==='start'?[587.33,880]:[523.25,659.25,783.99,1046.5];
+    notes.forEach((freq,i)=>{
+      const osc=audioCtx.createOscillator();
+      const gain=audioCtx.createGain();
+      osc.type='sine';
+      osc.frequency.setValueAtTime(freq,now+i*0.18);
+      gain.gain.setValueAtTime(0.001,now+i*0.18);
+      gain.gain.exponentialRampToValueAtTime(0.28,now+i*0.18+0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001,now+i*0.18+0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now+i*0.18);
+      osc.stop(now+i*0.18+0.36);
+    });
+  }catch(e){}
+}
+
+function loadSounds(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(SOUND_KEY));
+    if(saved) soundPrefs={start:!!saved.start,end:!!saved.end};
+  }catch(e){}
+  updateSoundButtons();
+}
+
+function saveSounds(){
+  try{ localStorage.setItem(SOUND_KEY,JSON.stringify(soundPrefs)); }catch(e){}
+}
+
+function updateSoundButtons(){
+  const bS=document.getElementById('btnSndStart');
+  const bE=document.getElementById('btnSndEnd');
+  bS.classList.toggle('on',soundPrefs.start);
+  bS.textContent=soundPrefs.start?'🔔':'🔕';
+  bE.classList.toggle('on',soundPrefs.end);
+  bE.textContent=soundPrefs.end?'🔔':'🔕';
+}
+
+function toggleSound(which){
+  initAudio();
+  soundPrefs[which]=!soundPrefs[which];
+  saveSounds();
+  updateSoundButtons();
+  if(soundPrefs[which]) playAlert(which);
+}
+
+function loadSetup(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(STORE_KEY));
+    if(saved){
+      ['cV','cKP','cPO','cPK'].forEach(id=>{
+        if(saved[id]!==undefined && saved[id]!=='') document.getElementById(id).value=saved[id];
+      });
+    }
+  }catch(e){}
+}
+
+function saveSetup(){
+  try{
+    const data={};
+    ['cV','cKP','cPO','cPK'].forEach(id=>{ data[id]=document.getElementById(id).value; });
+    localStorage.setItem(STORE_KEY,JSON.stringify(data));
+  }catch(e){}
+}
+
+function resetSetup(){
+  if(confirm('Ripristinare i parametri predefiniti calibrati?')){
+    ['cV','cKP','cPO','cPK'].forEach(id=>{ document.getElementById(id).value=DEFAULTS[id]; });
+    saveSetup();
+    if(lastEdited==='km') syncFromKm();
+    else if(lastEdited==='perc') syncFromPerc();
+    calc(true);
+  }
+}
+
+function cleanInt(el){ el.value=el.value.replace(/[^0-9]/g,''); }
+function round5(n){ return Math.round(n/5)*5; }
+
+function getParams(){
+  return {
+    v:Math.max(0.1,+document.getElementById('cV').value||14.21),
+    kp:Math.max(0.1,+document.getElementById('cKP').value||3.37),
+    pk:Math.max(0.001,+document.getElementById('cPK').value||0.296)
+  };
+}
+
+function bindHold(btnId, fn){
+  const btn=document.getElementById(btnId);
+  let t1=null,t2=null,t3=null;
+  const clear=()=>{ clearTimeout(t1); clearInterval(t2); clearTimeout(t3); };
+  const start=(e)=>{
+    e.preventDefault();
+    fn();
+    t1=setTimeout(()=>{
+      t2=setInterval(fn,160);
+      t3=setTimeout(()=>{
+        clearInterval(t2);
+        t2=setInterval(fn,80);
+      },2650);
+    },350);
+  };
+  btn.addEventListener('mousedown',start);
+  btn.addEventListener('touchstart',start,{passive:false});
+  btn.addEventListener('mouseup',clear);
+  btn.addEventListener('mouseleave',clear);
+  btn.addEventListener('touchend',clear);
+  btn.addEventListener('touchcancel',clear);
+}
+
+function setNow(recalc=true, resetManual=false){
+  if(resetManual) manualTime=false;
+  const now=new Date();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('inTime').value=`${hh}:${mm}`;
+  if(recalc) calc(true);
+}
+
+setInterval(()=>{
+  if(!session && !manualTime){
+    setNow(true, false);
+  }
+}, 30000);
+
+function stepTime(delta){
+  if(session) return;
+  manualTime=true;
+  const el=document.getElementById('inTime');
+  const now=new Date();
+  const nowTot=now.getHours()*60+now.getMinutes();
+  const [h,min]=(el.value||`${now.getHours()}:${now.getMinutes()}`).split(':').map(Number);
+  let tot=h*60+min;
+  if(delta>0){
+    tot=(tot%5===0)?tot+5:Math.ceil(tot/5)*5;
+  }else{
+    tot=(tot%5===0)?tot-5:Math.floor(tot/5)*5;
+    if(tot<nowTot) tot=nowTot;
+  }
+  tot=((tot%1440)+1440)%1440;
+  el.value=`${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`;
+  calc(true);
+}
+
+function stepTarget(type, delta){
+  const el=document.getElementById(type==='p'?'tP':'tK');
+  const minVal=+el.min||0;
+  const maxVal=+el.max||9999;
+  let cur=+el.value||minVal;
+  let next;
+  if(delta>0){
+    next=(cur%5===0)?cur+5:Math.ceil(cur/5)*5;
+  }else{
+    next=(cur%5===0)?cur-5:Math.floor(cur/5)*5;
+  }
+  if(next<minVal) next=minVal;
+  if(next>maxVal) next=maxVal;
+  el.value=next;
+  calc(true);
+}
+
+function syncFromKm(){
+  const elK=document.getElementById('inKm'),elP=document.getElementById('inPerc');
+  const {kp,pk}=getParams();
+  const maxK=Math.round(100*kp);
+  if(elK.value===''){ elP.value=''; elP.classList.remove('auto'); return; }
+  if(+elK.value>maxK) elK.value=maxK;
+  const km=+elK.value||0;
+  elP.value=Math.min(100,Math.round(km*pk));
+  elP.classList.add('auto');
+  elK.classList.remove('auto');
+}
+
+function syncFromPerc(){
+  const elK=document.getElementById('inKm'),elP=document.getElementById('inPerc');
+  const {kp}=getParams();
+  if(elP.value===''){ elK.value=''; elK.classList.remove('auto'); return; }
+  if(+elP.value>100) elP.value=100;
+  const perc=+elP.value||0;
+  elK.value=Math.round(perc*kp);
+  elK.classList.add('auto');
+  elP.classList.remove('auto');
+}
+
+const elKm=document.getElementById('inKm'),elPerc=document.getElementById('inPerc');
+elKm.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); if(e.key==='Enter') elKm.blur(); });
+elKm.addEventListener('input',()=>{ cleanInt(elKm); lastEdited='km'; syncFromKm(); calc(false); });
+elKm.addEventListener('blur',()=>calc(true));
+
+elPerc.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); if(e.key==='Enter') elPerc.blur(); });
+elPerc.addEventListener('input',()=>{ cleanInt(elPerc); lastEdited='perc'; syncFromPerc(); calc(false); });
+elPerc.addEventListener('blur',()=>calc(true));
+
+['tP','tK'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); if(e.key==='Enter') el.blur(); });
+  el.addEventListener('input',()=>{ cleanInt(el); calc(false); });
+  el.addEventListener('blur',()=>{
+    const minVal=+el.min||0, maxVal=+el.max||9999;
+    let val=round5(+el.value||0);
+    if(val<minVal) val=minVal;
+    if(val>maxVal) val=maxVal;
+    el.value=val;
+    calc(true);
+  });
+});
+
+document.getElementById('inTime').addEventListener('change',()=>{
+  manualTime=true;
+  const el=document.getElementById('inTime');
+  const now=new Date();
+  const nowTot=now.getHours()*60+now.getMinutes();
+  if(el.value){
+    const [h,min]=el.value.split(':').map(Number);
+    if(h*60+min < nowTot) setNow(false, true);
+  }
+  calc(true);
+});
+
+['cV','cKP','cPO','cPK'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); });
+  el.addEventListener('input',()=>{
+    if(+el.value<0) el.value=Math.abs(+el.value);
+    saveSetup();
+    if(lastEdited==='km') syncFromKm();
+    else if(lastEdited==='perc') syncFromPerc();
+    calc(true);
+  });
+});
+
+bindHold('upP',()=>stepTarget('p',5));
+bindHold('dnP',()=>stepTarget('p',-5));
+bindHold('upK',()=>stepTarget('k',5));
+bindHold('dnK',()=>stepTarget('k',-5));
+bindHold('upT',()=>stepTime(5));
+bindHold('dnT',()=>stepTime(-5));
+
+function unlock(){ if(prompt('Inserisci codice PIN:')===PIN) document.getElementById('admBox').style.display='block'; }
+function lock(){ document.getElementById('admBox').style.display='none'; }
+function mode(x){
+  m=x;
+  document.getElementById('bP').classList.toggle('act',x==='p');
+  document.getElementById('bK').classList.toggle('act',x==='k');
+  document.getElementById('boxP').style.display=x==='p'?'block':'none';
+  document.getElementById('boxK').style.display=x==='k'?'block':'none';
+  calc(true);
+}
+
+function fmt(h){
+  if(h<=0) return "0h 00m";
+  const tm=Math.round(h*60);
+  return Math.floor(tm/60)+"h "+String(tm%60).padStart(2,'0')+"m";
+}
+
+function fmtCd(ms){
+  const totSec=Math.max(0,Math.floor(ms/1000));
+  const h=Math.floor(totSec/3600);
+  const min=Math.floor((totSec%3600)/60);
+  const s=totSec%60;
+  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function calcEndTime(h){
+  const val=document.getElementById('inTime').value;
+  if(!val) return "--:--";
+  const [hh,mm]=val.split(':').map(Number);
+  const startMin=hh*60+mm;
+  const endMinTot=startMin+Math.round(h*60);
+  const days=Math.floor(endMinTot/1440);
+  const endMin=((endMinTot%1440)+1440)%1440;
+  const res=String(Math.floor(endMin/60)).padStart(2,'0')+":"+String(endMin%60).padStart(2,'0');
+  return days>0 ? `${res}<small>+${days}g</small>` : res;
+}
+
+function buildStartTimestamp(){
+  const val=document.getElementById('inTime').value;
+  const now=new Date();
+  const [hh,mm]=val.split(':').map(Number);
+  const dt=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0,0);
+  if(dt.getTime() < now.getTime() - 60000) dt.setDate(dt.getDate()+1);
+  return dt.getTime();
+}
+
+function setPreset(val){
+  const el=document.getElementById(m==='p'?'tP':'tK');
+  el.value=val;
+  calc(true);
+}
+
+function updatePresets(ka,pa,maxKm,curVal){
+  if(m==='p'){
+    const vals=[70,80,90,100];
+    document.getElementById('preP').innerHTML=vals.map(v=>
+      `<button type="button" class="p-btn${curVal===v?' act':''}" ${v<pa?'disabled':''} onclick="setPreset(${v})">${v}%</button>`
+    ).join('');
+  }else{
+    const vals=[200,225,250,275,300];
+    let html=vals.map(v=>
+      `<button type="button" class="p-btn${curVal===v?' act':''}" ${(v<ka||v>maxKm)?'disabled':''} onclick="setPreset(${v})">${v}</button>`
+    ).join('');
+    html+=`<button type="button" class="p-btn${curVal===maxKm?' act':''}" onclick="setPreset(${maxKm})">Max</button>`;
+    document.getElementById('preK').innerHTML=html;
+  }
+}
+
+function calc(enforceMin=false){
+  const rc=document.getElementById('rc'),s2=document.getElementById('step2'),st=document.getElementById('stepTime'),btnAct=document.getElementById('btnAction');
+  const {v,kp,pk}=getParams();
+
+  if(elKm.value===''||elPerc.value===''){
+    s2.classList.add('dis');st.classList.add('dis');rc.classList.add('wait');
+    btnAct.disabled=true;
+    document.getElementById('rl').textContent=m==='p'?'Autonomia finale (km)':'Autonomia finale (%)';
+    document.getElementById('rv').textContent='--';
+    document.getElementById('rt').textContent='--';
+    document.getElementById('rf').textContent='--';
+    currentDurationH=0;
+    return;
+  }
+
+  s2.classList.remove('dis');
+  if(!session) st.classList.remove('dis');
+  rc.classList.remove('wait');
+  btnAct.disabled=false;
+
+  const ka=Math.max(0,+elKm.value||0),pa=Math.min(100,Math.max(0,+elPerc.value||0));
+  const maxKm=Math.round(ka+(100-pa)*kp);
+
+  const elTP=document.getElementById('tP'),elTK=document.getElementById('tK');
+  elTP.min=pa; elTP.max=100;
+  elTK.min=ka; elTK.max=maxKm;
+
+  const editingCurrent=(document.activeElement===elKm||document.activeElement===elPerc);
+  if(editingCurrent||enforceMin){
+    if(elTP.value===''||+elTP.value<pa) elTP.value=pa;
+    if(elTK.value===''||+elTK.value<ka) elTK.value=ka;
+  }
+
+  if(m==='p'){
+    if(+elTP.value>100) elTP.value=100;
+    const tp=Math.max(pa,+elTP.value||0),dp=Math.max(0,tp-pa),dk=dp*kp;
+    currentDurationH=dk/v;
+    document.getElementById('rl').textContent='Autonomia finale (km)';
+    document.getElementById('rv').textContent=Math.round(ka+dk)+" km";
+    document.getElementById('rt').textContent=fmt(currentDurationH);
+    document.getElementById('rf').innerHTML=calcEndTime(currentDurationH);
+    updatePresets(ka,pa,maxKm,tp);
+  }else{
+    if(+elTK.value>maxKm) elTK.value=maxKm;
+    const tk=Math.max(ka,+elTK.value||0),dk=Math.max(0,tk-ka),dp=dk*pk,pf=Math.min(100,Math.round(pa+dp));
+    currentDurationH=dk/v;
+    document.getElementById('rl').textContent='Autonomia finale (%)';
+    document.getElementById('rv').textContent=pf+"%";
+    document.getElementById('rt').textContent=fmt(currentDurationH);
+    document.getElementById('rf').innerHTML=calcEndTime(currentDurationH);
+    updatePresets(ka,pa,maxKm,tk);
+  }
+
+  if(session){
+    session.mode=m;
+    session.tP=document.getElementById('tP').value;
+    session.tK=document.getElementById('tK').value;
+    session.durationMs=Math.round(currentDurationH*3600000);
+    saveSession();
+    renderCountdown();
+  }
+}
+
+function saveSession(){
+  try{ localStorage.setItem(SESSION_KEY,JSON.stringify(session)); }catch(e){}
+}
+
+function toggleSession(){
+  initAudio();
+  if(session){
+    if(!confirm('Terminare la ricarica in corso?')) return;
+    session=null;
+    localStorage.removeItem(SESSION_KEY);
+    clearInterval(tickInterval);
+    applySessionUI(false);
+    setNow(true, true);
+  }else{
+    if(elKm.value===''||elPerc.value==='') return;
+    if(!manualTime){
+      setNow(true, false);
+    }
+    const startTs=buildStartTimestamp();
+    const isDelayed=startTs > Date.now() + 2000;
+    session={
+      inKm:elKm.value,
+      inPerc:elPerc.value,
+      inTime:document.getElementById('inTime').value,
+      mode:m,
+      tP:document.getElementById('tP').value,
+      tK:document.getElementById('tK').value,
+      startTs:startTs,
+      durationMs:Math.round(currentDurationH*3600000),
+      isDelayed:isDelayed,
+      notifiedStart:!isDelayed,
+      notifiedEnd:false
+    };
+    saveSession();
+    applySessionUI(true);
+    startTick();
+  }
+}
+
+function applySessionUI(active){
+  const btn=document.getElementById('btnAction');
+  const cdBox=document.getElementById('cdBox');
+  const cardCur=document.getElementById('cardCurrent');
+  const stepTime=document.getElementById('stepTime');
+  if(active){
+    btn.textContent='Termina Ricarica';
+    btn.classList.add('stop');
+    cdBox.style.display='block';
+    cardCur.classList.add('dis');
+    stepTime.classList.add('dis');
+  }else{
+    btn.textContent='Avvia / Conferma Ricarica';
+    btn.classList.remove('stop');
+    cdBox.style.display='none';
+    cardCur.classList.remove('dis');
+    stepTime.classList.remove('dis');
+  }
+}
+
+function startTick(){
+  clearInterval(tickInterval);
+  renderCountdown();
+  tickInterval=setInterval(renderCountdown,1000);
+}
+
+function renderCountdown(){
+  if(!session) return;
+  const now=Date.now();
+  const cdBox=document.getElementById('cdBox');
+  const lbl=document.getElementById('cdLabel');
+  const pctEl=document.getElementById('cdPerc');
+  const timerEl=document.getElementById('cdTimer');
+  const estKmEl=document.getElementById('cdEstKm');
+  const estPercEl=document.getElementById('cdEstPerc');
+  const bar=document.getElementById('progBar');
+
+  const ka=Math.max(0,+session.inKm||0);
+  const pa=Math.min(100,Math.max(0,+session.inPerc||0));
+  const {v,kp,pk}=getParams();
+
+  if(now < session.startTs){
+    cdBox.classList.add('sched');
+    lbl.textContent='AVVIO PROGRAMMATO TRA:';
+    pctEl.textContent='ORE '+session.inTime;
+    timerEl.textContent=fmtCd(session.startTs - now);
+    estKmEl.textContent=`${Math.round(ka)} km`;
+    estPercEl.textContent=`${Math.round(pa)}%`;
+    bar.style.width='0%';
+    return;
+  }
+
+  if(!session.notifiedStart){
+    session.notifiedStart=true;
+    saveSession();
+    if(soundPrefs.start) playAlert('start');
+  }
+
+  cdBox.classList.remove('sched');
+  pctEl.textContent='';
+  const endTs=session.startTs + session.durationMs;
+  const rem=endTs - now;
+  const elapsedH=Math.max(0,(now - session.startTs)/3600000);
+  const gainedKm=elapsedH*v;
+
+  let targetKm=ka, targetPerc=pa;
+  if(session.mode==='p'){
+    targetPerc=Math.min(100,Math.max(pa,+session.tP||pa));
+    targetKm=ka+(targetPerc-pa)*kp;
+  }else{
+    targetKm=Math.max(ka,+session.tK||ka);
+    targetPerc=Math.min(100,pa+(targetKm-ka)*pk);
+  }
+
+  if(rem <= 0){
+    if(!session.notifiedEnd){
+      session.notifiedEnd=true;
+      saveSession();
+      if(soundPrefs.end) playAlert('end');
+    }
+    lbl.textContent='RICARICA COMPLETATA';
+    timerEl.textContent='00:00:00';
+    estKmEl.textContent=`${Math.round(targetKm)} km`;
+    estPercEl.textContent=`${Math.round(targetPerc)}%`;
+    bar.style.width='100%';
+    return;
+  }
+
+  const curKm=Math.min(targetKm, ka+gainedKm);
+  const curPerc=Math.min(targetPerc, pa+gainedKm*pk);
+  const percDone=session.durationMs>0 ? Math.min(100,Math.max(0,Math.round(((now-session.startTs)/session.durationMs)*100))) : 100;
+
+  lbl.textContent='RICARICA IN CORSO';
+  timerEl.textContent=fmtCd(rem);
+  estKmEl.textContent=`~${Math.round(curKm)} km`;
+  estPercEl.textContent=`~${Math.round(curPerc)}%`;
+  bar.style.width=percDone+'%';
+}
+
+function loadSession(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(SESSION_KEY));
+    if(saved && saved.startTs){
+      session=saved;
+      elKm.value=session.inKm;
+      elPerc.value=session.inPerc;
+      document.getElementById('inTime').value=session.inTime;
+      document.getElementById('tP').value=session.tP;
+      document.getElementById('tK').value=session.tK;
+      mode(session.mode||'p');
+      applySessionUI(true);
+      startTick();
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+loadSetup();
+loadSounds();
+if(!loadSession()){
+  setNow(false, true);
+  calc(false);
+}
+</script>
+</body>
+</html>
