@@ -1,79 +1,93 @@
-const MerossCloud = require('meross-cloud');
+const crypto = require('crypto');
 
-exports.handler = async function (event, context) {
-   const options = {
-    email: process.env.MEROSS_EMAIL,
-    password: process.env.MEROSS_PASSWORD,
-    apiUrl: 'https://meross.com',
-    logger: () => {}
-  };
+const SECRET = '23x17ahWarFH6w29';
+const BASE_URL = 'https://iotx-eu.meross.com';
 
+async function callMerossApi(endpoint, payload, token = '') {
+  const timestamp = Date.now();
+  const nonce = crypto.randomBytes(8).toString('hex');
+  const params = Buffer.from(JSON.stringify(payload)).toString('base64');
+  const sign = crypto
+    .createHash('md5')
+    .update(SECRET + timestamp + nonce + params)
+    .digest('hex');
 
-  return new Promise((resolve) => {
-    const meross = new MerossCloud(options);
-
-    meross.on('deviceInitialized', (deviceId, deviceDef, device) => {
-      // Controlla se il dispositivo è la tua presa MSS305ZT
-      if (deviceDef.deviceType && deviceDef.deviceType.toLowerCase().includes('mss305')) {
-        device.getSystemAllData((err, res) => {
-          if (err) {
-            resolve({
-              statusCode: 500,
-              body: JSON.stringify({ errore: 'Errore lettura dati presa' })
-            });
-            return;
-          }
-
-          // Legge se l'interruttore è acceso (1 = ON, 0 = OFF)
-          const onoff = res.all.digest.togglex ? res.all.digest.togglex[0].onoff : 0;
-
-          // Legge il consumo istantaneo (Meross restituisce i milliwatt, quindi dividiamo per 1000)
-          device.getControlElectricity((errElec, resElec) => {
-            const watt = (!errElec && resElec && resElec.electricity)
-              ? Math.round(resElec.electricity.power / 1000)
-              : 0;
-
-            // Consideriamo la presa "effettivamente collegata e in carica" se supera i 50W
-            const inCarica = onoff === 1 && watt > 50;
-
-            resolve({
-              statusCode: 200,
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                modello: deviceDef.deviceType,
-                accesa: onoff === 1,
-                watt: watt,
-                kw: Number((watt / 1000).toFixed(2)),
-                inCarica: inCarica
-              })
-            });
-          });
-        });
-      }
-    });
-
-    meross.on('error', (err) => {
-      resolve({
-        statusCode: 500,
-        body: JSON.stringify({ errore: err.message })
-      });
-    });
-
-    // Timeout di sicurezza dopo 8 secondi
-    setTimeout(() => {
-      resolve({
-        statusCode: 504,
-        body: JSON.stringify({ errore: 'Tempo scaduto connessione Meross' })
-      });
-    }, 8000);
-
-    meross.connect((err) => {
-      if (err) {
-        resolve({
-          statusCode: 401,
-          body: JSON.stringify({ errore: 'Login fallito: ' + err.message })
-        });
-      }
-    });
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Basic ${token}` : 'Basic',
+      'vender': 'Meross',
+      'AppVersion': '3.22.4',
+      'AppLanguage': 'IT',
+      'User-Agent': 'MerossIOT/3.22.4'
+    },
+    body: JSON.stringify({
+      params,
+      sign,
+      timestamp,
+      nonce
+    })
   });
+
+  return response.json();
+}
+
+exports.handler = async function () {
+  try {
+    const email = (process.env.MEROSS_EMAIL || '').trim();
+    const password = (process.env.MEROSS_PASSWORD || '').trim();
+
+    if (!email || !password) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ errore: 'Credenziali mancanti su Netlify' })
+      };
+    }
+
+    // 1. Login diretto sul server europeo Meross
+    const loginRes = await callMerossApi('/v1/Auth/signIn', {
+      email: email,
+      password: password
+    });
+
+    if (loginRes.apiStatus !== 0 || !loginRes.data || !loginRes.data.token) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({
+          errore: 'Risposta Meross: ' + (loginRes.info || JSON.stringify(loginRes))
+        })
+      };
+    }
+
+    const token = loginRes.data.token;
+
+    // 2. Recupera la lista dei dispositivi per trovare la presa MSS305ZT
+    const devRes = await callMerossApi('/v1/Device/devList', {}, token);
+    const devices = (devRes.data && Array.isArray(devRes.data)) ? devRes.data : [];
+    const presa = devices.find(d => d.deviceType && d.deviceType.toLowerCase().includes('mss305')) || devices[0];
+
+    if (!presa) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ errore: 'Nessuna presa Meross trovata sull account' })
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: presa.devName,
+        modello: presa.deviceType,
+        online: presa.onlineStatus === 1,
+        uuid: presa.uuid
+      })
+    };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ errore: 'Errore tecnico: ' + err.message })
+    };
+  }
 };
