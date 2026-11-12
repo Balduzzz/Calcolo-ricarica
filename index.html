@@ -799,6 +799,17 @@ function renderCountdown(){
   const pa=Math.min(100,Math.max(0,+session.inPerc||0));
   const {v,kp,pk}=getParams();
 
+    // Pausa automatica se la presa Meross è spenta o eroga 0 Watt
+  if (window.presaReale && window.presaReale.verificata && !window.presaReale.inCarica) {
+    if (!window.presaReale.lastPauseTs) window.presaReale.lastPauseTs = now;
+    const diffPausa = now - window.presaReale.lastPauseTs;
+    session.startTs += diffPausa;
+    window.presaReale.lastPauseTs = now;
+    lbl.textContent = window.presaReale.accesa ? `IN PAUSA (PRESA ${window.presaReale.watt} W < 50 W)` : 'IN PAUSA (PRESA SPENTA)';
+    return;
+  } else if (window.presaReale) {
+    window.presaReale.lastPauseTs = null;
+  }
   if(now < session.startTs){
     cdBox.classList.add('sched');
     lbl.textContent='AVVIO PROGRAMMATO';
@@ -895,6 +906,72 @@ if(!loadSession()){
   setNow(false, false);
   calc(false, false);
 }
+
+// --- MONITORAGGIO WATT REALI PRESA MEROSS ---
+window.presaReale = { verificata: false, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: null };
+
+(function initMerossReale() {
+  const badge = document.createElement('div');
+  badge.id = 'stato-presa-badge';
+  badge.style.cssText = 'text-align:center; padding:12px 16px; margin-bottom:14px; border-radius:16px; font-weight:700; font-size:13px; letter-spacing:0.4px; cursor:pointer; transition:all 0.3s ease; background:#ffffff; color:#64748b; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #e2e8f0;';
+  badge.textContent = '⏳ Lettura Watt presa Ricarica AUTO...';
+  badge.title = 'Tocca per aggiornare subito i Watt';
+
+  const firstCard = document.querySelector('.card') || document.querySelector('input')?.closest('div')?.parentElement;
+  if (firstCard && firstCard.parentNode) {
+    firstCard.parentNode.insertBefore(badge, firstCard);
+  } else {
+    document.body.prepend(badge);
+  }
+
+  async function controllaPresa() {
+    try {
+      const fnPath = '/.netlify/functions/' + 'check-meross';
+      const res = await fetch(fnPath);
+      const data = await res.json();
+
+      if (!res.ok || data.errore) {
+        badge.textContent = '⚠️ ' + (data.errore || 'Errore lettura presa');
+        badge.style.background = '#fefce8';
+        badge.style.color = '#a16207';
+        return;
+      }
+
+      window.presaReale.verificata = true;
+      window.presaReale.accesa = data.accesa;
+      window.presaReale.watt = data.watt;
+      window.presaReale.kw = data.kw;
+      window.presaReale.inCarica = data.inCarica;
+
+      if (data.inCarica) {
+        badge.textContent = `🟢 IN CARICA REALE: ${data.watt} W (${data.kw} kW)`;
+        badge.style.background = '#ecfdf5';
+        badge.style.color = '#15803d';
+        badge.style.borderColor = '#86efac';
+      } else if (data.accesa) {
+        badge.textContent = `🟡 PRESA ACCESA: ${data.watt} W (SOTTO SOGLIA 50 W)`;
+        badge.style.background = '#fefce8';
+        badge.style.color = '#a16207';
+        badge.style.borderColor = '#fde047';
+      } else {
+        badge.textContent = `🔴 PRESA SPENTA (0 W)`;
+        badge.style.background = '#fef2f2';
+        badge.style.color = '#b91c1c';
+        badge.style.borderColor = '#fca5a5';
+      }
+    } catch (e) {
+      badge.textContent = '⚠️ Errore di rete durante il controllo presa';
+    }
+  }
+
+  badge.addEventListener('click', () => {
+    badge.textContent = '⏳ Aggiornamento Watt in corso...';
+    controllaPresa();
+  });
+
+  controllaPresa();
+  setInterval(controllaPresa, 30000);
+})();
 </script>
 </body>
 </html>
