@@ -915,32 +915,18 @@ if(!loadSession()){
   calc(false, false);
 }
 
-// --- MONITORAGGIO WATT REALI PRESA MEROSS ---
-window.presaReale = { verificata: false, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: null };
-
-// --- MONITORAGGIO WATT REALI, AVVIO AUTOMATICO E RESET MANUALE ---
-window.presaReale = { verificata: false, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: null };
-
-(function initMerossReale() {
+// --- GESTIONE RICARICA REALE CON CONTATORE HARDWARE MEROSS ---
+(function initSistemaHardware() {
+  const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
+  const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
+  const FN_URL = '/.netlify/functions/' + 'check-meross';
   const btnSessione = document.querySelector('button[onclick*="toggleSession"]');
-
-  function aggiornaTastoReset() {
-    if (!btnSessione) return;
-    if (session && session.startTs) {
-      btnSessione.style.display = 'block';
-      btnSessione.textContent = '🔄 Resetta / Termina Sessione';
-    } else {
-      btnSessione.style.display = 'none';
-    }
-  }
-
-  aggiornaTastoReset();
 
   const badge = document.createElement('div');
   badge.id = 'stato-presa-badge';
-  badge.style.cssText = 'text-align:center; padding:12px 16px; margin-bottom:14px; border-radius:16px; font-weight:700; font-size:13px; letter-spacing:0.4px; cursor:pointer; transition:all 0.3s ease; background:#ffffff; color:#64748b; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #e2e8f0;';
-  badge.textContent = '⏳ Lettura Watt presa Ricarica AUTO...';
-  badge.title = 'Tocca per aggiornare subito i Watt';
+  badge.style.cssText = 'text-align:center; padding:14px 16px; margin-bottom:14px; border-radius:16px; font-weight:700; font-size:13px; line-height:1.5; cursor:pointer; transition:all 0.3s ease; background:#ffffff; color:#64748b; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #e2e8f0;';
+  badge.innerHTML = '⏳ Lettura presa e contatore kWh...';
+  badge.title = 'Tocca per aggiornare subito';
 
   const firstCard = document.querySelector('.card') || document.querySelector('input')?.closest('div')?.parentElement;
   if (firstCard && firstCard.parentNode) {
@@ -949,67 +935,125 @@ window.presaReale = { verificata: false, accesa: false, watt: 0, kw: 0, inCarica
     document.body.prepend(badge);
   }
 
-  async function controllaPresa() {
-    try {
-      const fnPath = '/.netlify/functions/' + 'check-meross';
-      const res = await fetch(fnPath);
-      const data = await res.json();
+  let datiRemoti = null;
 
-      if (!res.ok || data.errore) {
-        badge.textContent = '⚠️ ' + (data.errore || 'Errore lettura presa');
-        badge.style.background = '#fefce8';
-        badge.style.color = '#a16207';
-        return;
+  function aggiornaUI(d) {
+    if (!d) return;
+    datiRemoti = d;
+    const kwh = (d.kwhImmesso || 0).toFixed(2);
+    const watt = d.wattAttuali || 0;
+    const kw = d.kwAttuali || 0;
+
+    // Calcola i secondi totali attivi (accumulati nelle pause + segmento attuale)
+    let secondiTotali = d.secondiAccumulati || 0;
+    if (d.stato === 'in_corso' && d.inizioSegmentoTs) {
+      secondiTotali += Math.max(0, (Date.now() - d.inizioSegmentoTs) / 1000);
+    }
+
+    if (d.stato === 'in_corso') {
+      badge.innerHTML = `🟢 IN CARICA: <b>${watt} W</b> (${kw} kW)<br>⚡ Energia reale immessa: <b>${kwh} kWh</b>`;
+      badge.style.background = '#ecfdf5';
+      badge.style.color = '#15803d';
+      badge.style.borderColor = '#86efac';
+    } else if (d.stato === 'pausa') {
+      badge.innerHTML = `🟡 RICARICA IN PAUSA (${watt} W)<br>⚡ Energia accumulata: <b>${kwh} kWh</b>`;
+      badge.style.background = '#fefce8';
+      badge.style.color = '#a16207';
+      badge.style.borderColor = '#fde047';
+    } else {
+      badge.innerHTML = `🔴 PRESA IN ATTESA (${watt} W)<br>⚡ Energia immessa: <b>${kwh} kWh</b>`;
+      badge.style.background = '#fef2f2';
+      badge.style.color = '#b91c1c';
+      badge.style.borderColor = '#fca5a5';
+    }
+
+    // Sincronizza il timer locale con i dati salvati su Firebase anche se l'app era chiusa
+    if (d.stato === 'in_corso' || d.stato === 'pausa') {
+      if (!session || !session.startTs) {
+        if (typeof setNow === 'function') setNow(false, false);
+        if (typeof toggleSession === 'function') toggleSession();
       }
-
-      window.presaReale.verificata = true;
-      window.presaReale.accesa = data.accesa;
-      window.presaReale.watt = data.watt;
-      window.presaReale.kw = data.kw;
-      window.presaReale.inCarica = data.inCarica;
-
-      if (data.inCarica) {
-        badge.textContent = `🟢 IN CARICA REALE: ${data.watt} W (${data.kw} kW)`;
-        badge.style.background = '#ecfdf5';
-        badge.style.color = '#15803d';
-        badge.style.borderColor = '#86efac';
-
-        // Avvia automaticamente la sessione solo se non ne esiste già una attiva/in pausa
-        if (!session || !session.startTs) {
-          if (typeof setNow === 'function') setNow(false, false);
-          if (typeof toggleSession === 'function') toggleSession();
-        }
-      } else if (data.accesa) {
-        badge.textContent = `🟡 PRESA ACCESA: ${data.watt} W (SOTTO SOGLIA 50 W)`;
-        badge.style.background = '#fefce8';
-        badge.style.color = '#a16207';
-        badge.style.borderColor = '#fde047';
-      } else {
-        badge.textContent = `🔴 PRESA SPENTA (0 W) - IN ATTESA DI RICARICA`;
-        badge.style.background = '#fef2f2';
-        badge.style.color = '#b91c1c';
-        badge.style.borderColor = '#fca5a5';
+      if (session) {
+        session.startTs = Date.now() - (secondiTotali * 1000);
+        window.presaReale = {
+          verificata: true,
+          accesa: d.presaAccesa,
+          watt: watt,
+          kw: kw,
+          inCarica: d.stato === 'in_corso',
+          lastPauseTs: d.stato === 'pausa' ? Date.now() : null
+        };
       }
+    }
 
-      aggiornaTastoReset();
-    } catch (e) {
-      badge.textContent = '⚠️ Errore di rete durante il controllo presa';
+    if (btnSessione) {
+      const mostraReset = (d.stato === 'in_corso' || d.stato === 'pausa' || (d.kwhImmesso || 0) > 0);
+      btnSessione.style.display = mostraReset ? 'block' : 'none';
+      btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
     }
   }
 
+  // Salva su Firebase lo stato attuale di partenza impostato dall'utente
+  async function salvaStatoPartenza() {
+    if (datiRemoti && (datiRemoti.stato === 'in_corso' || datiRemoti.stato === 'pausa')) return;
+    const base = datiRemoti || {};
+    const payload = {
+      ...base,
+      stato: 'attesa',
+      secondiAccumulati: 0,
+      inizioSegmentoTs: null,
+      kwhImmesso: 0,
+      inKm: +elKm.value || 0,
+      inPerc: +elPerc.value || 0,
+      targetP: +document.getElementById('tP').value || 80,
+      targetK: +document.getElementById('tK').value || 300,
+      mode: typeof m !== 'undefined' ? m : 'p'
+    };
+    await fetch(DB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+
+  ['inKm', 'inPerc', 'tP', 'tK'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', salvaStatoPartenza);
+  });
+
+  // Tasto Reset: azzera sessione locale, timer e imposta il nuovo zero sul contatore della presa
   if (btnSessione) {
-    btnSessione.addEventListener('click', () => {
-      setTimeout(aggiornaTastoReset, 100);
-    });
+    btnSessione.onclick = async function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      badge.innerHTML = '⏳ Azzeramento sessione e contatore kWh...';
+      if (session && session.startTs && typeof toggleSession === 'function') {
+        toggleSession();
+      }
+      window.presaReale = { verificata: false, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: null };
+      const res = await fetch(FN_URL + '?reset=1').then(r => r.json()).catch(() => null);
+      if (res && res.statoDb) aggiornaUI(res.statoDb);
+    };
+  }
+
+  async function aggiornaDaPresa() {
+    try {
+      const res = await fetch(FN_URL);
+      const data = await res.json();
+      if (data && data.statoDb) aggiornaUI(data.statoDb);
+    } catch (e) {}
   }
 
   badge.addEventListener('click', () => {
-    badge.textContent = '⏳ Aggiornamento Watt in corso...';
-    controllaPresa();
+    badge.innerHTML = '⏳ Lettura contatore reale in corso...';
+    aggiornaDaPresa();
   });
 
-  controllaPresa();
-  setInterval(controllaPresa, 30000);
+  // 1. Legge subito Firebase per mostrare i dati istantaneamente all'apertura
+  fetch(DB_URL).then(r => r.json()).then(aggiornaUI).catch(() => {});
+  // 2. Interroga la presa Meross per aggiornare i kWh reali e poi ricontrolla ogni 60s mentre l'app è aperta
+  aggiornaDaPresa();
+  setInterval(aggiornaDaPresa, 60000);
 })();
 </script>
 </body>
