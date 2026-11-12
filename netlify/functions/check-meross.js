@@ -1,11 +1,13 @@
 const MerossCloud = require('meross-cloud');
 
 exports.handler = async function (event, context) {
-  const options = {
+   const options = {
     email: process.env.MEROSS_EMAIL,
     password: process.env.MEROSS_PASSWORD,
+    apiUrl: 'https://meross.com',
     logger: () => {}
   };
+
 
   return new Promise((resolve) => {
     const meross = new MerossCloud(options);
