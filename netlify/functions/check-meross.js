@@ -4,6 +4,9 @@ const mqtt = require('mqtt');
 const SECRET = '23x17ahWarFH6w29';
 const BASE_URL = 'https://meross.com';
 
+// Memoria temporanea per evitare troppi login ravvicinati
+let cachedSession = null;
+
 async function callMerossApi(endpoint, payload, token = '') {
   const timestamp = Date.now();
   const nonce = crypto.randomBytes(8).toString('hex');
@@ -26,7 +29,12 @@ async function callMerossApi(endpoint, payload, token = '') {
     body: JSON.stringify({ params, sign, timestamp, nonce })
   });
 
-  return response.json();
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error('Server Meross momentaneamente occupato (attendi 2 minuti)');
+  }
 }
 
 function queryDeviceMqtt(userId, key, domain, uuid, namespace) {
@@ -95,31 +103,46 @@ exports.handler = async function () {
     const email = (process.env.MEROSS_EMAIL || '').trim();
     const password = (process.env.MEROSS_PASSWORD || '').trim();
 
-    const loginRes = await callMerossApi('/v1/Auth/signIn', { email, password });
-    if (loginRes.apiStatus !== 0 || !loginRes.data) {
-      return { statusCode: 401, body: JSON.stringify({ errore: 'Login fallito' }) };
+    // Se non abbiamo già una sessione salvata, effettua il login
+    if (!cachedSession) {
+      const loginRes = await callMerossApi('/v1/Auth/signIn', { email, password });
+      if (loginRes.apiStatus !== 0 || !loginRes.data) {
+        return {
+          statusCode: 401,
+          body: JSON.stringify({ errore: 'Login fallito: ' + (loginRes.info || '') })
+        };
+      }
+
+      const { token, userid, key, mqttDomain } = loginRes.data;
+      const devRes = await callMerossApi('/v1/Device/devList', {}, token);
+      const devices = Array.isArray(devRes.data) ? devRes.data : [];
+      const presa = devices.find(d => d.devName && d.devName.toLowerCase().includes('ricarica auto'));
+
+      if (!presa) {
+        return { statusCode: 404, body: JSON.stringify({ errore: 'Presa Ricarica AUTO non trovata' }) };
+      }
+
+      cachedSession = {
+        userid,
+        key,
+        uuid: presa.uuid,
+        devName: presa.devName,
+        onlineStatus: presa.onlineStatus,
+        domain: presa.domain || mqttDomain || '://meross.com'
+      };
     }
 
-    const { token, userid, key, mqttDomain } = loginRes.data;
-    const devRes = await callMerossApi('/v1/Device/devList', {}, token);
-    const devices = Array.isArray(devRes.data) ? devRes.data : [];
-    const presa = devices.find(d => d.devName && d.devName.toLowerCase().includes('ricarica auto'));
-
-    if (!presa) {
-      return { statusCode: 404, body: JSON.stringify({ errore: 'Presa Ricarica AUTO non trovata' }) };
-    }
-
-    const domain = presa.domain || mqttDomain || '://meross.com';
+    const { userid, key, uuid, devName, onlineStatus, domain } = cachedSession;
 
     const [sysData, elecData] = await Promise.all([
-      queryDeviceMqtt(userid, key, domain, presa.uuid, 'Appliance.System.All'),
-      queryDeviceMqtt(userid, key, domain, presa.uuid, 'Appliance.Control.Electricity')
+      queryDeviceMqtt(userid, key, domain, uuid, 'Appliance.System.All'),
+      queryDeviceMqtt(userid, key, domain, uuid, 'Appliance.Control.Electricity')
     ]);
 
     let accesa = false;
     if (sysData && sysData.all && sysData.all.digest && sysData.all.digest.togglex) {
       const toggle = Array.isArray(sysData.all.digest.togglex)
-        ? sysData.all.digest.togglex[0]
+        ? sysData.all.digest.togglex
         : sysData.all.digest.togglex;
       accesa = toggle.onoff === 1;
     }
@@ -128,14 +151,14 @@ exports.handler = async function () {
       ? Math.round(elecData.electricity.power / 1000)
       : 0;
 
-    const inCarica = presa.onlineStatus === 1 && accesa && watt > 50;
+    const inCarica = onlineStatus === 1 && accesa && watt > 50;
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nome: presa.devName,
-        online: presa.onlineStatus === 1,
+        nome: devName,
+        online: onlineStatus === 1,
         accesa: accesa,
         watt: watt,
         kw: Number((watt / 1000).toFixed(2)),
@@ -143,6 +166,7 @@ exports.handler = async function () {
       })
     };
   } catch (err) {
+    cachedSession = null;
     return {
       statusCode: 500,
       body: JSON.stringify({ errore: 'Errore tecnico: ' + err.message })
