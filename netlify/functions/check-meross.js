@@ -65,7 +65,7 @@ exports.handler = async function () {
     // 2. Recupera la lista dei dispositivi per trovare la presa MSS305ZT
     const devRes = await callMerossApi('/v1/Device/devList', {}, token);
     const devices = (devRes.data && Array.isArray(devRes.data)) ? devRes.data : [];
-    const presa = devices.find(d => d.deviceType && d.deviceType.toLowerCase().includes('mss305')) || devices[0];
+    const presa = devices.find(d => d.devName && d.devName.toLowerCase().includes('ricarica auto'));
 
     if (!presa) {
       return {
