@@ -799,8 +799,6 @@ function renderCountdown(){
   const pa=Math.min(100,Math.max(0,+session.inPerc||0));
   const {v,kp,pk}=getParams();
 
-     const {v,kp,pk}=getParams();
-
   // Pausa intelligente senza perdere i progressi se la presa è spenta o sotto i 50W
   if (window.presaReale && window.presaReale.verificata && !window.presaReale.inCarica) {
     if (!window.presaReale.lastPauseTs) window.presaReale.lastPauseTs = now;
