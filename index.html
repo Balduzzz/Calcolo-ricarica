@@ -915,12 +915,16 @@ if(!loadSession()){
   calc(false, false);
 }
 
-// --- GESTIONE RICARICA REALE CON CONTATORE HARDWARE MEROSS ---
+// --- GESTIONE RICARICA REALE CON FIREBASE E MEROSS ---
 (function initSistemaHardware() {
   const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
   const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
   const FN_URL = '/.netlify/functions/' + 'check-meross';
   const btnSessione = document.querySelector('button[onclick*="toggleSession"]');
+
+  // Nasconde i campanellini e disattiva il segnale acustico
+  document.querySelectorAll('[onclick*="toggleSound"], .sound-btn, .bell-btn').forEach(el => el.style.display = 'none');
+  window.triggerAlert = function() {};
 
   const badge = document.createElement('div');
   badge.id = 'stato-presa-badge';
@@ -935,22 +939,18 @@ if(!loadSession()){
     document.body.prepend(badge);
   }
 
-  let datiRemoti = null;
-
   function aggiornaUI(d) {
     if (!d) return;
-    datiRemoti = d;
     const kwh = (d.kwhImmesso || 0).toFixed(2);
     const watt = d.wattAttuali || 0;
     const kw = d.kwAttuali || 0;
 
-    // Calcola i secondi totali attivi (accumulati nelle pause + segmento attuale)
     let secondiTotali = d.secondiAccumulati || 0;
     if (d.stato === 'in_corso' && d.inizioSegmentoTs) {
       secondiTotali += Math.max(0, (Date.now() - d.inizioSegmentoTs) / 1000);
     }
 
-    if (d.stato === 'in_corso') {
+    if (d.stato === 'in_corso' || watt > 50) {
       badge.innerHTML = `🟢 IN CARICA: <b>${watt} W</b> (${kw} kW)<br>⚡ Energia reale immessa: <b>${kwh} kWh</b>`;
       badge.style.background = '#ecfdf5';
       badge.style.color = '#15803d';
@@ -967,42 +967,37 @@ if(!loadSession()){
       badge.style.borderColor = '#fca5a5';
     }
 
-    // Sincronizza il timer locale con i dati salvati su Firebase anche se l'app era chiusa
-    if (d.stato === 'in_corso' || d.stato === 'pausa') {
+    // Avvia e sincronizza il timer locale ogni volta che la carica è in corso o in pausa
+    if (d.stato === 'in_corso' || d.stato === 'pausa' || watt > 50) {
+      window.presaReale = {
+        verificata: true,
+        accesa: true,
+        watt: watt,
+        kw: kw,
+        inCarica: (d.stato === 'in_corso' || watt > 50),
+        lastPauseTs: d.stato === 'pausa' ? Date.now() : null
+      };
+
       if (!session || !session.startTs) {
         if (typeof setNow === 'function') setNow(false, false);
         if (typeof toggleSession === 'function') toggleSession();
       }
       if (session) {
         session.startTs = Date.now() - (secondiTotali * 1000);
-        window.presaReale = {
-          verificata: true,
-          accesa: d.presaAccesa,
-          watt: watt,
-          kw: kw,
-          inCarica: d.stato === 'in_corso',
-          lastPauseTs: d.stato === 'pausa' ? Date.now() : null
-        };
+        if (typeof tick === 'function') tick();
       }
     }
 
     if (btnSessione) {
-      const mostraReset = (d.stato === 'in_corso' || d.stato === 'pausa' || (d.kwhImmesso || 0) > 0);
+      const mostraReset = (d.stato === 'in_corso' || d.stato === 'pausa' || watt > 50 || (d.kwhImmesso || 0) > 0);
       btnSessione.style.display = mostraReset ? 'block' : 'none';
       btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
     }
   }
 
-  // Salva su Firebase lo stato attuale di partenza impostato dall'utente
-  async function salvaStatoPartenza() {
-    if (datiRemoti && (datiRemoti.stato === 'in_corso' || datiRemoti.stato === 'pausa')) return;
-    const base = datiRemoti || {};
+  // Aggiorna solo i parametri numerici su Firebase con PATCH (senza mai resettare lo stato 'in_corso')
+  async function salvaSoloParametri() {
     const payload = {
-      ...base,
-      stato: 'attesa',
-      secondiAccumulati: 0,
-      inizioSegmentoTs: null,
-      kwhImmesso: 0,
       inKm: +elKm.value || 0,
       inPerc: +elPerc.value || 0,
       targetP: +document.getElementById('tP').value || 80,
@@ -1010,7 +1005,7 @@ if(!loadSession()){
       mode: typeof m !== 'undefined' ? m : 'p'
     };
     await fetch(DB_URL, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).catch(() => {});
@@ -1018,10 +1013,9 @@ if(!loadSession()){
 
   ['inKm', 'inPerc', 'tP', 'tK'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('change', salvaStatoPartenza);
+    if (el) el.addEventListener('change', salvaSoloParametri);
   });
 
-  // Tasto Reset: azzera sessione locale, timer e imposta il nuovo zero sul contatore della presa
   if (btnSessione) {
     btnSessione.onclick = async function (e) {
       e.preventDefault();
@@ -1045,13 +1039,11 @@ if(!loadSession()){
   }
 
   badge.addEventListener('click', () => {
-    badge.innerHTML = '⏳ Lettura contatore reale in corso...';
+    badge.innerHTML = '⏳ Lettura presa in corso...';
     aggiornaDaPresa();
   });
 
-  // 1. Legge subito Firebase per mostrare i dati istantaneamente all'apertura
   fetch(DB_URL).then(r => r.json()).then(aggiornaUI).catch(() => {});
-  // 2. Interroga la presa Meross per aggiornare i kWh reali e poi ricontrolla ogni 60s mentre l'app è aperta
   aggiornaDaPresa();
   setInterval(aggiornaDaPresa, 60000);
 })();
