@@ -71,7 +71,7 @@ exports.handler = async function (event, context) {
       if (err) {
         resolve({
           statusCode: 401,
-          body: JSON.stringify({ errore: 'Login Meross fallito' })
+          body: JSON.stringify({ errore: 'Login fallito: ' + err.message })
         });
       }
     });
