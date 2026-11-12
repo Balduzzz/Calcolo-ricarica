@@ -1044,13 +1044,42 @@ if(!loadSession()){
     };
   }
 
-  async function aggiornaDaPresa() {
+    async function aggiornaDaPresa() {
     try {
-      const res = await fetch(FN_URL);
-      const data = await res.json();
-      if (data && data.statoDb) aggiornaUI(data.statoDb);
-    } catch (e) {}
+      const data = await fetch(DB_URL).then(r => r.json());
+      if (data) aggiornaUI(data);
+    } catch (e) {
+      badge.innerHTML = '⚠️ Errore di rete Firebase';
+    }
   }
+
+  if (btnSessione) {
+    btnSessione.onclick = async function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      badge.innerHTML = '⏳ Azzeramento sessione e contatore kWh...';
+      if (session && session.startTs && typeof toggleSession === 'function') {
+        toggleSession();
+      }
+      localStorage.removeItem('ricarica_session');
+      window.presaReale = { verificata: true, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: Date.now() };
+      const resetPayload = {
+        stato: 'attesa',
+        secondiAccumulati: 0,
+        inizioSegmentoTs: null,
+        kwhImmesso: 0,
+        wattAttuali: 0,
+        kwAttuali: 0
+      };
+      await fetch(DB_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resetPayload)
+      }).catch(() => {});
+      aggiornaUI(resetPayload);
+    };
+  }
+
 
   badge.addEventListener('click', () => {
     badge.innerHTML = '⏳ Lettura presa in corso...';
