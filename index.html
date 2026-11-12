@@ -1025,25 +1025,6 @@ if(!loadSession()){
     if (el) el.addEventListener('change', salvaSoloParametri);
   });
 
-  if (btnSessione) {
-    btnSessione.onclick = async function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      badge.innerHTML = '⏳ Azzeramento sessione e contatore kWh...';
-      if (session && session.startTs && typeof toggleSession === 'function') {
-        toggleSession();
-      }
-      localStorage.removeItem('ricarica_session');
-      window.presaReale = { verificata: true, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: Date.now() };
-      const res = await fetch(FN_URL + '?reset=1').then(r => r.json()).catch(() => null);
-      if (res && res.statoDb) {
-        aggiornaUI(res.statoDb);
-      } else {
-        aggiornaVisibilitaReset(null);
-      }
-    };
-  }
-
     async function aggiornaDaPresa() {
     try {
       const data = await fetch(DB_URL).then(r => r.json());
@@ -1079,8 +1060,6 @@ if(!loadSession()){
       aggiornaUI(resetPayload);
     };
   }
-
-
   badge.addEventListener('click', () => {
     badge.innerHTML = '⏳ Lettura presa in corso...';
     aggiornaDaPresa();
