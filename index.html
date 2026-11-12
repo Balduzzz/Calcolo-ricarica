@@ -915,11 +915,12 @@ if(!loadSession()){
   calc(false, false);
 }
 
-// --- GESTIONE RICARICA REALE CON FIREBASE E MEROSS ---
+// --- GESTIONE RICARICA REALE CON FIREBASE E MEROSS (COMPATIBILE GITHUB PAGES) ---
 (function initSistemaHardware() {
   const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
   const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
-  const FN_URL = '/.netlify/functions/' + 'check-meross';
+  const NETLIFY_HOST = 'calcolo-ricarica.' + 'netlify.app';
+  const FN_URL = 'https://' + NETLIFY_HOST + '/.netlify/functions/check-meross';
   const btnSessione = document.querySelector('button[onclick*="toggleSession"]');
 
   // Nasconde i campanellini e disattiva il segnale acustico
@@ -939,23 +940,35 @@ if(!loadSession()){
     document.body.prepend(badge);
   }
 
+  function aggiornaVisibilitaReset(d) {
+    if (!btnSessione) return;
+    const timerAttivo = Boolean(session && session.startTs);
+    const datiDbAttivi = Boolean(d && (d.stato === 'in_corso' || d.stato === 'pausa' || (d.wattAttuali || 0) > 50 || (d.kwhImmesso || 0) > 0));
+    btnSessione.style.display = (timerAttivo || datiDbAttivi) ? 'block' : 'none';
+    btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
+  }
+
   function aggiornaUI(d) {
-    if (!d) return;
+    if (!d) {
+      aggiornaVisibilitaReset(null);
+      return;
+    }
     const kwh = (d.kwhImmesso || 0).toFixed(2);
     const watt = d.wattAttuali || 0;
     const kw = d.kwAttuali || 0;
+    const staCaricando = (d.stato === 'in_corso' || watt > 50);
 
     let secondiTotali = d.secondiAccumulati || 0;
     if (d.stato === 'in_corso' && d.inizioSegmentoTs) {
       secondiTotali += Math.max(0, (Date.now() - d.inizioSegmentoTs) / 1000);
     }
 
-    if (d.stato === 'in_corso' || watt > 50) {
+    if (staCaricando) {
       badge.innerHTML = `🟢 IN CARICA: <b>${watt} W</b> (${kw} kW)<br>⚡ Energia reale immessa: <b>${kwh} kWh</b>`;
       badge.style.background = '#ecfdf5';
       badge.style.color = '#15803d';
       badge.style.borderColor = '#86efac';
-    } else if (d.stato === 'pausa') {
+    } else if (d.stato === 'pausa' || (session && session.startTs)) {
       badge.innerHTML = `🟡 RICARICA IN PAUSA (${watt} W)<br>⚡ Energia accumulata: <b>${kwh} kWh</b>`;
       badge.style.background = '#fefce8';
       badge.style.color = '#a16207';
@@ -967,35 +980,31 @@ if(!loadSession()){
       badge.style.borderColor = '#fca5a5';
     }
 
-    // Avvia e sincronizza il timer locale ogni volta che la carica è in corso o in pausa
-    if (d.stato === 'in_corso' || d.stato === 'pausa' || watt > 50) {
-      window.presaReale = {
-        verificata: true,
-        accesa: true,
-        watt: watt,
-        kw: kw,
-        inCarica: (d.stato === 'in_corso' || watt > 50),
-        lastPauseTs: d.stato === 'pausa' ? Date.now() : null
-      };
+    // Imposta sempre lo stato reale della presa per bloccare o far scorrere il timer correttamente
+    window.presaReale = {
+      verificata: true,
+      accesa: staCaricando,
+      watt: watt,
+      kw: kw,
+      inCarica: staCaricando,
+      lastPauseTs: staCaricando ? null : Date.now()
+    };
 
+    // Avvia il timer solo se la presa sta effettivamente caricando (> 50W)
+    if (staCaricando) {
       if (!session || !session.startTs) {
         if (typeof setNow === 'function') setNow(false, false);
         if (typeof toggleSession === 'function') toggleSession();
       }
       if (session) {
         session.startTs = Date.now() - (secondiTotali * 1000);
-        if (typeof tick === 'function') tick();
       }
     }
 
-    if (btnSessione) {
-      const mostraReset = (d.stato === 'in_corso' || d.stato === 'pausa' || watt > 50 || (d.kwhImmesso || 0) > 0);
-      btnSessione.style.display = mostraReset ? 'block' : 'none';
-      btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
-    }
+    if (typeof tick === 'function') tick();
+    aggiornaVisibilitaReset(d);
   }
 
-  // Aggiorna solo i parametri numerici su Firebase con PATCH (senza mai resettare lo stato 'in_corso')
   async function salvaSoloParametri() {
     const payload = {
       inKm: +elKm.value || 0,
@@ -1024,9 +1033,14 @@ if(!loadSession()){
       if (session && session.startTs && typeof toggleSession === 'function') {
         toggleSession();
       }
-      window.presaReale = { verificata: false, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: null };
+      localStorage.removeItem('ricarica_session');
+      window.presaReale = { verificata: true, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: Date.now() };
       const res = await fetch(FN_URL + '?reset=1').then(r => r.json()).catch(() => null);
-      if (res && res.statoDb) aggiornaUI(res.statoDb);
+      if (res && res.statoDb) {
+        aggiornaUI(res.statoDb);
+      } else {
+        aggiornaVisibilitaReset(null);
+      }
     };
   }
 
@@ -1043,6 +1057,7 @@ if(!loadSession()){
     aggiornaDaPresa();
   });
 
+  aggiornaVisibilitaReset(null);
   fetch(DB_URL).then(r => r.json()).then(aggiornaUI).catch(() => {});
   aggiornaDaPresa();
   setInterval(aggiornaDaPresa, 60000);
