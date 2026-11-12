@@ -76,11 +76,9 @@ exports.handler = async function (event) {
       return { statusCode: 400, body: JSON.stringify({ errore: 'Chiavi Meross mancanti su Netlify' }) };
     }
 
-    // Interroga in parallelo: stato interruttore, potenza istantanea, contatore energetico e Firebase
-    const [sysData, elecData, consData, fbRes] = await Promise.all([
+    const [sysData, elecData, fbRes] = await Promise.all([
       queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.System.All'),
       queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.Electricity'),
-      queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.ConsumptionX'),
       fetch(DB_URL).then(r => r.json()).catch(() => null)
     ]);
 
@@ -91,7 +89,7 @@ exports.handler = async function (event) {
     let accesa = false;
     if (sysData.all && sysData.all.digest && sysData.all.digest.togglex) {
       const toggle = Array.isArray(sysData.all.digest.togglex)
-        ? sysData.all.digest.togglex
+        ? sysData.all.digest.togglex[0]
         : sysData.all.digest.togglex;
       accesa = toggle && toggle.onoff === 1;
     }
@@ -100,59 +98,37 @@ exports.handler = async function (event) {
       ? Math.round(elecData.electricity.power / 1000)
       : 0;
     const kw = Number((watt / 1000).toFixed(2));
-    const inCarica = accesa && watt > 50;
-
-    // Somma i Wh degli ultimi giorni registrati dal chip interno della presa (indice progressivo immune alla mezzanotte)
-    let whContatorePresa = 0;
-    if (consData && Array.isArray(consData.consumptionx)) {
-      const ultimiGiorni = consData.consumptionx.slice(-5);
-      whContatorePresa = ultimiGiorni.reduce((acc, item) => acc + (Number(item.value) || 0), 0);
-    }
+    // Considera in carica se potenza > 50W (anche se togglex non risponde come previsto)
+    const inCarica = watt > 50;
 
     const now = Date.now();
     const isReset = event.queryStringParameters && event.queryStringParameters.reset === '1';
 
-    let statoDb = fbRes || {
-      stato: 'attesa', // 'attesa' | 'in_corso' | 'pausa'
+    let statoDb = (fbRes && typeof fbRes === 'object') ? fbRes : {
+      stato: 'attesa',
       secondiAccumulati: 0,
       inizioSegmentoTs: null,
-      whBase: whContatorePresa,
-      kwhImmesso: 0,
-      inKm: 0,
-      inPerc: 0,
-      targetP: 80,
-      targetK: 300,
-      mode: 'p'
+      kwhImmesso: 0
     };
 
     if (isReset) {
-      // Azzera contatori e fissa il livello attuale del chip della presa come nuovo punto zero
       statoDb.stato = 'attesa';
       statoDb.secondiAccumulati = 0;
       statoDb.inizioSegmentoTs = null;
-      statoDb.whBase = whContatorePresa;
       statoDb.kwhImmesso = 0;
     } else if (inCarica) {
-      if (statoDb.stato !== 'in_corso') {
-        // Avvio o ripresa dopo una pausa
-        if (statoDb.stato === 'attesa') {
-          statoDb.whBase = whContatorePresa;
-          statoDb.secondiAccumulati = 0;
-          statoDb.kwhImmesso = 0;
-        } else if (statoDb.stato === 'pausa') {
-          // Riallinea il riferimento energetico conservando i kWh già accumulati prima della pausa
-          statoDb.whBase = whContatorePresa - Math.round((statoDb.kwhImmesso || 0) * 1000);
-        }
+      if (statoDb.stato === 'in_corso' && statoDb.ultimoCheckTs) {
+        // Calcola i kWh reali immessi nell'intervallo trascorso dall'ultimo check (max 15 min per sicurezza)
+        const deltaSec = Math.max(0, Math.min(900, (now - statoDb.ultimoCheckTs) / 1000));
+        const kwMedio = ((statoDb.kwAttuali || kw) + kw) / 2;
+        statoDb.kwhImmesso = Number(((statoDb.kwhImmesso || 0) + (kwMedio * (deltaSec / 3600))).toFixed(3));
+      } else if (statoDb.stato !== 'in_corso') {
+        // Primo rilevamento di carica (> 50W): avvia subito il cronometro
         statoDb.stato = 'in_corso';
         statoDb.inizioSegmentoTs = now;
       }
-
-      // Aggiorna i kWh reali dal contatore hardware
-      if (whContatorePresa >= (statoDb.whBase || 0)) {
-        statoDb.kwhImmesso = Number(((whContatorePresa - statoDb.whBase) / 1000).toFixed(2));
-      }
     } else {
-      // Presa spenta o sotto i 50W
+      // Potenza <= 50W: mette in pausa congelando i secondi accumulati
       if (statoDb.stato === 'in_corso') {
         if (statoDb.inizioSegmentoTs) {
           statoDb.secondiAccumulati = (statoDb.secondiAccumulati || 0) + Math.max(0, (now - statoDb.inizioSegmentoTs) / 1000);
@@ -164,7 +140,7 @@ exports.handler = async function (event) {
 
     statoDb.wattAttuali = watt;
     statoDb.kwAttuali = kw;
-    statoDb.presaAccesa = accesa;
+    statoDb.presaAccesa = accesa || inCarica;
     statoDb.ultimoCheckTs = now;
 
     await fetch(DB_URL, {
@@ -178,7 +154,7 @@ exports.handler = async function (event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nome: 'Ricarica AUTO',
-        accesa,
+        accesa: statoDb.presaAccesa,
         watt,
         kw,
         inCarica,
