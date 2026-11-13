@@ -100,7 +100,6 @@ exports.handler = async function (event) {
     const now = Date.now();
     let comandoInviato = null;
 
-    // 1. Comando manuale dall'app (?toggle=1 accendi, ?toggle=0 spegni)
     if (qs.toggle === '1' || qs.toggle === '0') {
       const targetOnoff = Number(qs.toggle);
       await queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.ToggleX', 'SET', {
@@ -110,18 +109,14 @@ exports.handler = async function (event) {
       if (targetOnoff === 1) statoDb.accensioneProgrammataTs = null;
       if (targetOnoff === 0) statoDb.spegnimentoProgrammatoTs = null;
       await new Promise(r => setTimeout(r, 800));
-    }
-    // 2. Controllo spegnimento programmato (ha priorità se entrambi scaduti)
-    else if (statoDb.spegnimentoProgrammatoTs && now >= statoDb.spegnimentoProgrammatoTs) {
+    } else if (statoDb.spegnimentoProgrammatoTs && now >= statoDb.spegnimentoProgrammatoTs) {
       await queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.ToggleX', 'SET', {
         togglex: { channel: 0, onoff: 0 }
       });
       comandoInviato = 0;
       statoDb.spegnimentoProgrammatoTs = null;
       await new Promise(r => setTimeout(r, 800));
-    }
-    // 3. Controllo accensione programmata
-    else if (statoDb.accensioneProgrammataTs && now >= statoDb.accensioneProgrammataTs) {
+    } else if (statoDb.accensioneProgrammataTs && now >= statoDb.accensioneProgrammataTs) {
       await queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.ToggleX', 'SET', {
         togglex: { channel: 0, onoff: 1 }
       });
@@ -130,7 +125,6 @@ exports.handler = async function (event) {
       await new Promise(r => setTimeout(r, 800));
     }
 
-    // 4. Legge lo stato aggiornato e la potenza reale
     const [sysData, elecData] = await Promise.all([
       queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.System.All', 'GET'),
       queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.Electricity', 'GET')
@@ -143,9 +137,9 @@ exports.handler = async function (event) {
     let accesa = false;
     if (sysData.all && sysData.all.digest && sysData.all.digest.togglex) {
       const toggle = Array.isArray(sysData.all.digest.togglex)
-        ? sysData.all.digest.togglex
+        ? sysData.all.digest.togglex[0]
         : sysData.all.digest.togglex;
-      accesa = toggle && toggle.onoff === 1;
+      accesa = Boolean(toggle && toggle.onoff === 1);
     }
     if (comandoInviato !== null) accesa = (comandoInviato === 1);
 
@@ -207,4 +201,3 @@ exports.handler = async function (event) {
     return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ errore: err.message }) };
   }
 };
-
