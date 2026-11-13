@@ -6,7 +6,7 @@ const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatab
 const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
 const DEFAULT_MQTT = ['mqtt-eu-4', 'meross', 'com'].join('.');
 
-function queryDeviceMqtt(userId, key, domain, uuid, namespace) {
+function queryDeviceMqtt(userId, key, domain, uuid, namespace, method = 'GET', payload = {}) {
   return new Promise((resolve) => {
     const appId = crypto.createHash('md5').update('app' + Date.now() + Math.random()).digest('hex');
     const clientId = `app:${appId}`;
@@ -36,13 +36,13 @@ function queryDeviceMqtt(userId, key, domain, uuid, namespace) {
           header: {
             from: responseTopic,
             messageId,
-            method: 'GET',
+            method,
             namespace,
             payloadVersion: 1,
             sign,
             timestamp
           },
-          payload: {}
+          payload
         };
         client.publish(requestTopic, JSON.stringify(msg));
       });
@@ -85,50 +85,76 @@ exports.handler = async function (event) {
     const domain = (process.env.MEROSS_DOMAIN || DEFAULT_MQTT).trim();
 
     if (!userid || !key) {
-      return {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({ errore: 'Chiavi Meross mancanti su Netlify' })
-      };
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ errore: 'Chiavi Meross mancanti' }) };
     }
 
-    const [sysData, elecData, fbRes] = await Promise.all([
-      queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.System.All'),
-      queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.Electricity'),
-      fetch(DB_URL).then(r => r.json()).catch(() => null)
-    ]);
-
-    if (!sysData) {
-      return {
-        statusCode: 504,
-        headers: corsHeaders,
-        body: JSON.stringify({ errore: 'Presa Ricarica AUTO non raggiungibile' })
-      };
-    }
-
-    let accesa = false;
-    if (sysData.all && sysData.all.digest && sysData.all.digest.togglex) {
-      const toggle = Array.isArray(sysData.all.digest.togglex)
-        ? sysData.all.digest.togglex[0]
-        : sysData.all.digest.togglex;
-      accesa = toggle && toggle.onoff === 1;
-    }
-
-    const watt = (elecData && elecData.electricity && typeof elecData.electricity.power === 'number')
-      ? Math.round(elecData.electricity.power / 1000)
-      : 0;
-    const kw = Number((watt / 1000).toFixed(2));
-    const inCarica = watt > 50;
-
-    const now = Date.now();
-    const isReset = event.queryStringParameters && event.queryStringParameters.reset === '1';
-
+    const qs = event.queryStringParameters || {};
+    const fbRes = await fetch(DB_URL).then(r => r.json()).catch(() => null);
     let statoDb = (fbRes && typeof fbRes === 'object') ? fbRes : {
       stato: 'attesa',
       secondiAccumulati: 0,
       inizioSegmentoTs: null,
       kwhImmesso: 0
     };
+
+    const now = Date.now();
+    let comandoInviato = null;
+
+    // 1. Comando manuale dall'app (?toggle=1 accendi, ?toggle=0 spegni)
+    if (qs.toggle === '1' || qs.toggle === '0') {
+      const targetOnoff = Number(qs.toggle);
+      await queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.ToggleX', 'SET', {
+        togglex: { channel: 0, onoff: targetOnoff }
+      });
+      comandoInviato = targetOnoff;
+      if (targetOnoff === 1) statoDb.accensioneProgrammataTs = null;
+      if (targetOnoff === 0) statoDb.spegnimentoProgrammatoTs = null;
+      await new Promise(r => setTimeout(r, 800));
+    }
+    // 2. Controllo spegnimento programmato (ha priorità se entrambi scaduti)
+    else if (statoDb.spegnimentoProgrammatoTs && now >= statoDb.spegnimentoProgrammatoTs) {
+      await queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.ToggleX', 'SET', {
+        togglex: { channel: 0, onoff: 0 }
+      });
+      comandoInviato = 0;
+      statoDb.spegnimentoProgrammatoTs = null;
+      await new Promise(r => setTimeout(r, 800));
+    }
+    // 3. Controllo accensione programmata
+    else if (statoDb.accensioneProgrammataTs && now >= statoDb.accensioneProgrammataTs) {
+      await queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.ToggleX', 'SET', {
+        togglex: { channel: 0, onoff: 1 }
+      });
+      comandoInviato = 1;
+      statoDb.accensioneProgrammataTs = null;
+      await new Promise(r => setTimeout(r, 800));
+    }
+
+    // 4. Legge lo stato aggiornato e la potenza reale
+    const [sysData, elecData] = await Promise.all([
+      queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.System.All', 'GET'),
+      queryDeviceMqtt(userid, key, domain, PRESA_UUID, 'Appliance.Control.Electricity', 'GET')
+    ]);
+
+    if (!sysData) {
+      return { statusCode: 504, headers: corsHeaders, body: JSON.stringify({ errore: 'Presa Ricarica AUTO non raggiungibile' }) };
+    }
+
+    let accesa = false;
+    if (sysData.all && sysData.all.digest && sysData.all.digest.togglex) {
+      const toggle = Array.isArray(sysData.all.digest.togglex)
+        ? sysData.all.digest.togglex
+        : sysData.all.digest.togglex;
+      accesa = toggle && toggle.onoff === 1;
+    }
+    if (comandoInviato !== null) accesa = (comandoInviato === 1);
+
+    const watt = (elecData && elecData.electricity && typeof elecData.electricity.power === 'number')
+      ? Math.round(elecData.electricity.power / 1000)
+      : 0;
+    const kw = Number((watt / 1000).toFixed(2));
+    const inCarica = accesa && watt > 50;
+    const isReset = qs.reset === '1';
 
     if (isReset) {
       statoDb.stato = 'attesa';
@@ -156,7 +182,7 @@ exports.handler = async function (event) {
 
     statoDb.wattAttuali = watt;
     statoDb.kwAttuali = kw;
-    statoDb.presaAccesa = accesa || inCarica;
+    statoDb.presaAccesa = accesa;
     statoDb.ultimoCheckTs = now;
 
     await fetch(DB_URL, {
@@ -170,7 +196,7 @@ exports.handler = async function (event) {
       headers: corsHeaders,
       body: JSON.stringify({
         nome: 'Ricarica AUTO',
-        accesa: statoDb.presaAccesa,
+        accesa,
         watt,
         kw,
         inCarica,
@@ -178,10 +204,7 @@ exports.handler = async function (event) {
       })
     };
   } catch (err) {
-    return {
-      statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({ errore: err.message })
-    };
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ errore: err.message }) };
   }
 };
+
