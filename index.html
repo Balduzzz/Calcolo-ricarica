@@ -710,7 +710,7 @@ function calc(enforceMin=false, sync=false){
     const finalKm = Math.min(maxKm, Math.round(ka + (gainedPerc * kpReale)));
 
     document.getElementById('rl').textContent = 'Autonomia attesa (Orario fisso)';
-    document.getElementById('rv').innerHTML = `${finalKm} km <span style="font-size:0.75em; opacity:0.85;">(${finalPerc}%)</span>`;
+    document.getElementById('rv').innerHTML = `${finalKm} km<br><span style="font-size:0.75em; opacity:0.85;">(${finalPerc}%)</span>`;
     document.getElementById('rt').textContent = fmt(currentDurationH);
     document.getElementById('rf').textContent = inpSpeg.value;
     s2.classList.add('dis');
