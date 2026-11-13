@@ -710,7 +710,7 @@ function calc(enforceMin=false, sync=false){
     const finalKm = Math.min(maxKm, Math.round(ka + (gainedPerc * kpReale)));
 
     document.getElementById('rl').textContent = 'Autonomia attesa (Orario fisso)';
-    document.getElementById('rv').textContent = `${finalKm} km (${finalPerc}%)`;
+    document.getElementById('rv').innerHTML = `${finalKm} km <span style="font-size:0.75em; opacity:0.85;">(${finalPerc}%)</span>`;
     document.getElementById('rt').textContent = fmt(currentDurationH);
     document.getElementById('rf').textContent = inpSpeg.value;
     s2.classList.add('dis');
@@ -1155,12 +1155,17 @@ if(!loadSession()){
     } catch (e) { badge.innerHTML = '⚠️ Errore invio comando alla presa'; }
   });
 
-  document.getElementById('ora-accensione').addEventListener('change', async (e) => {
+   document.getElementById('ora-accensione').addEventListener('change', async (e) => {
     if (!e.target.value) return;
     const ts = calcolaProssimoTimestamp(e.target.value);
     document.getElementById('btn-canc-accendi').style.display = 'inline-block';
     if (typeof calc === 'function') calc(false, false);
     await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accensioneProgrammataTs: ts }) }).catch(() => {});
+    if (presaAttualmenteAccesa && (!window.presaReale || !window.presaReale.inCarica)) {
+      const res = await fetch(`${FN_URL}?toggle=0`).catch(() => null);
+      const data = res ? await res.json().catch(() => null) : null;
+      if (data && data.statoDb) aggiornaUI(data.statoDb);
+    }
   });
 
   document.getElementById('btn-canc-accendi').addEventListener('click', async () => {
