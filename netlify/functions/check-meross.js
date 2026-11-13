@@ -149,9 +149,13 @@ exports.handler = async function (event) {
       body: JSON.stringify(statoDb)
     });
 
-    return {
+        return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      },
       body: JSON.stringify({
         nome: 'Ricarica AUTO',
         accesa: statoDb.presaAccesa,
@@ -161,7 +165,4 @@ exports.handler = async function (event) {
         statoDb
       })
     };
-  } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ errore: err.message }) };
-  }
-};
+
