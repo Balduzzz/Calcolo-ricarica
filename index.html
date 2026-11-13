@@ -501,27 +501,18 @@ function stepTarget(type, delta){
 
 function syncFromKm(){
   const elK=document.getElementById('inKm'),elP=document.getElementById('inPerc');
-  const {kp,pk}=getParams();
-  const maxK=Math.round(100*kp);
-  if(elK.value===''){ elP.value=''; elP.classList.remove('auto'); return; }
-  if(+elK.value>maxK) elK.value=maxK;
-  const km=+elK.value||0;
-  elP.value=Math.min(100,Math.round(km*pk));
-  elP.classList.add('auto');
+  if(+elK.value<0) elK.value=Math.abs(+elK.value);
   elK.classList.remove('auto');
+  elP.classList.remove('auto');
 }
 
 function syncFromPerc(){
   const elK=document.getElementById('inKm'),elP=document.getElementById('inPerc');
-  const {kp}=getParams();
-  if(elP.value===''){ elK.value=''; elK.classList.remove('auto'); return; }
+  if(+elP.value<0) elP.value=Math.abs(+elP.value);
   if(+elP.value>100) elP.value=100;
-  const perc=+elP.value||0;
-  elK.value=Math.round(perc*kp);
-  elK.classList.add('auto');
+  elK.classList.remove('auto');
   elP.classList.remove('auto');
 }
-
 const elKm=document.getElementById('inKm'),elPerc=document.getElementById('inPerc');
 elKm.addEventListener('keydown',e=>{ if(['-','e','E','+'].includes(e.key)) e.preventDefault(); if(e.key==='Enter') elKm.blur(); });
 elKm.addEventListener('input',()=>{ cleanInt(elKm); lastEdited='km'; syncFromKm(); calc(false, true); });
