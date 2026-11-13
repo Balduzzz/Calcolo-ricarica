@@ -1028,13 +1028,22 @@ if(!loadSession()){
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', salvaSoloParametri);
   });
+  
+  const NUOVO_HOST = 'calcolo-ricarica-2.' + 'netlify.app';
+  const FN_URL = 'https://' + NUOVO_HOST + '/.netlify/functions/check-meross';
 
   async function aggiornaDaPresa() {
     try {
-      const data = await fetch(DB_URL).then(r => r.json());
-      if (data) aggiornaUI(data);
+      const res = await fetch(FN_URL);
+      const data = await res.json();
+      if (data && data.statoDb) {
+        aggiornaUI(data.statoDb);
+      } else {
+        const fbData = await fetch(DB_URL).then(r => r.json());
+        if (fbData) aggiornaUI(fbData);
+      }
     } catch (e) {
-      badge.innerHTML = '⚠️ Errore di rete Firebase';
+      badge.innerHTML = '⚠️ Errore lettura presa in tempo reale';
     }
   }
 
