@@ -799,7 +799,7 @@ function renderCountdown(){
   const pa=Math.min(100,Math.max(0,+session.inPerc||0));
   const {v,kp,pk}=getParams();
 
-  // Pausa intelligente senza perdere i progressi se la presa è spenta o sotto i 50W
+    // Pausa intelligente senza perdere i progressi se la presa è spenta o sotto i 50W
   if (window.presaReale && window.presaReale.verificata && !window.presaReale.inCarica) {
     if (!window.presaReale.lastPauseTs) window.presaReale.lastPauseTs = now;
     const diffPausa = now - window.presaReale.lastPauseTs;
@@ -811,7 +811,7 @@ function renderCountdown(){
     return;
   } else if (window.presaReale && window.presaReale.lastPauseTs) {
     window.presaReale.lastPauseTs = null;
-    saveSession(false); // Salva il nuovo startTs aggiornato dopo la pausa
+    saveSession(false);
   }
 
   if(now < session.startTs){
@@ -828,7 +828,6 @@ function renderCountdown(){
   if(!session.startAlerted){
     session.startAlerted=true;
     saveSession(false);
-    triggerAlert('start');
   }
 
   cdBox.classList.remove('sched');
@@ -861,7 +860,6 @@ function renderCountdown(){
     if(!session.endAlerted){
       session.endAlerted=true;
       saveSession(false);
-      triggerAlert('end');
     }
     return;
   }
@@ -919,8 +917,6 @@ if(!loadSession()){
 (function initSistemaHardware() {
   const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
   const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
-  const NETLIFY_HOST = 'calcolo-ricarica.' + 'netlify.app';
-  const FN_URL = 'https://' + NETLIFY_HOST + '/.netlify/functions/check-meross';
   const btnSessione = document.querySelector('button[onclick*="toggleSession"]');
 
   // Nasconde i campanellini e disattiva il segnale acustico
@@ -942,10 +938,20 @@ if(!loadSession()){
 
   function aggiornaVisibilitaReset(d) {
     if (!btnSessione) return;
-    const timerAttivo = Boolean(session && session.startTs);
-    const datiDbAttivi = Boolean(d && (d.stato === 'in_corso' || d.stato === 'pausa' || (d.wattAttuali || 0) > 50 || (d.kwhImmesso || 0) > 0));
-    btnSessione.style.display = (timerAttivo || datiDbAttivi) ? 'block' : 'none';
-    btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
+    const watt = (d && d.wattAttuali) || 0;
+    const staCaricando = Boolean(d && (d.stato === 'in_corso' || watt > 50));
+    const haDatiDaResettare = Boolean((session && session.startTs) || (d && (d.stato === 'pausa' || (d.kwhImmesso || 0) > 0 || (d.secondiAccumulati || 0) > 0)));
+
+    if (staCaricando) {
+      // Presa attiva (> 50W): reset nascosto per impedire azzeramenti accidentali
+      btnSessione.style.display = 'none';
+    } else if (haDatiDaResettare) {
+      // Presa ferma (< 50W) con sessione in memoria: reset disponibile
+      btnSessione.style.display = 'block';
+      btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
+    } else {
+      btnSessione.style.display = 'none';
+    }
   }
 
   function aggiornaUI(d) {
@@ -980,7 +986,6 @@ if(!loadSession()){
       badge.style.borderColor = '#fca5a5';
     }
 
-    // Imposta sempre lo stato reale della presa per bloccare o far scorrere il timer correttamente
     window.presaReale = {
       verificata: true,
       accesa: staCaricando,
@@ -990,7 +995,6 @@ if(!loadSession()){
       lastPauseTs: staCaricando ? null : Date.now()
     };
 
-    // Avvia il timer solo se la presa sta effettivamente caricando (> 50W)
     if (staCaricando) {
       if (!session || !session.startTs) {
         if (typeof setNow === 'function') setNow(false, false);
@@ -1025,7 +1029,7 @@ if(!loadSession()){
     if (el) el.addEventListener('change', salvaSoloParametri);
   });
 
-    async function aggiornaDaPresa() {
+  async function aggiornaDaPresa() {
     try {
       const data = await fetch(DB_URL).then(r => r.json());
       if (data) aggiornaUI(data);
@@ -1038,11 +1042,17 @@ if(!loadSession()){
     btnSessione.onclick = async function (e) {
       e.preventDefault();
       e.stopPropagation();
+
+      // Impedisce qualsiasi reset se la presa sta ancora erogando > 50W
+      if (window.presaReale && window.presaReale.inCarica) return;
+
       badge.innerHTML = '⏳ Azzeramento sessione e contatore kWh...';
-      if (session && session.startTs && typeof toggleSession === 'function') {
+      if (typeof SESSION_KEY !== 'undefined') localStorage.removeItem(SESSION_KEY);
+      if (typeof session !== 'undefined' && session && session.startTs && typeof toggleSession === 'function') {
         toggleSession();
       }
-      localStorage.removeItem('ricarica_session');
+      session = null;
+
       window.presaReale = { verificata: true, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: Date.now() };
       const resetPayload = {
         stato: 'attesa',
@@ -1060,6 +1070,7 @@ if(!loadSession()){
       aggiornaUI(resetPayload);
     };
   }
+
   badge.addEventListener('click', () => {
     badge.innerHTML = '⏳ Lettura presa in corso...';
     aggiornaDaPresa();
