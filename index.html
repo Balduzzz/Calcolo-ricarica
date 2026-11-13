@@ -914,27 +914,71 @@ if(!loadSession()){
   calc(false, false);
 }
 
-// --- GESTIONE RICARICA REALE CON FIREBASE E MEROSS (COMPATIBILE GITHUB PAGES) ---
+// --- GESTIONE RICARICA REALE CON FIREBASE E MEROSS ---
 (function initSistemaHardware() {
   const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
   const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
+  const NUOVO_HOST = 'calcolo-ricarica-2.' + 'netlify.app';
+  const FN_URL = 'https://' + NUOVO_HOST + '/.netlify/functions/check-meross';
   const btnSessione = document.querySelector('button[onclick*="toggleSession"]');
 
   // Nasconde i campanellini e disattiva il segnale acustico
   document.querySelectorAll('[onclick*="toggleSound"], .sound-btn, .bell-btn').forEach(el => el.style.display = 'none');
   window.triggerAlert = function() {};
 
+  // Pannello superiore: Stato Presa + Interruttore + Accensione/Spegnimento Programmati
+  const controlWrapper = document.createElement('div');
+  controlWrapper.style.cssText = 'margin-bottom:14px; border-radius:18px; background:#ffffff; box-shadow:0 2px 10px rgba(0,0,0,0.04); border:1px solid #e2e8f0; overflow:hidden;';
+
   const badge = document.createElement('div');
   badge.id = 'stato-presa-badge';
-  badge.style.cssText = 'text-align:center; padding:14px 16px; margin-bottom:14px; border-radius:16px; font-weight:700; font-size:13px; line-height:1.5; cursor:pointer; transition:all 0.3s ease; background:#ffffff; color:#64748b; box-shadow:0 2px 8px rgba(0,0,0,0.04); border:1px solid #e2e8f0;';
+  badge.style.cssText = 'text-align:center; padding:14px 16px; font-weight:700; font-size:13px; line-height:1.5; cursor:pointer; transition:all 0.3s ease; background:#ffffff; color:#64748b;';
   badge.innerHTML = '⏳ Lettura presa e contatore kWh...';
   badge.title = 'Tocca per aggiornare subito';
 
+  const barComandi = document.createElement('div');
+  barComandi.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:10px 14px; background:#f8fafc; border-top:1px solid #e2e8f0;';
+  barComandi.innerHTML = `
+    <button type="button" id="btn-toggle-presa" style="width:100%; padding:10px 12px; border:none; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; background:#e2e8f0; color:#334155; transition:all 0.2s;">
+      ⏳ Verifica presa...
+    </button>
+    <div style="display:flex; gap:8px; justify-content:space-between;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:4px; background:#ffffff; padding:6px 10px; border-radius:12px; border:1px solid #cbd5e1;">
+        <span style="font-size:11px; font-weight:700; color:#15803d;">🟢 Accendi:</span>
+        <input type="time" id="ora-accensione" style="border:none; font-size:13px; font-weight:700; color:#0f172a; background:transparent; outline:none;">
+        <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:6px; padding:2px 5px; font-size:10px; font-weight:700; cursor:pointer;" title="Annulla">✕</button>
+      </div>
+      <div style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:4px; background:#ffffff; padding:6px 10px; border-radius:12px; border:1px solid #cbd5e1;">
+        <span style="font-size:11px; font-weight:700; color:#b91c1c;">🔴 Spegni:</span>
+        <input type="time" id="ora-spegnimento" style="border:none; font-size:13px; font-weight:700; color:#0f172a; background:transparent; outline:none;">
+        <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:6px; padding:2px 5px; font-size:10px; font-weight:700; cursor:pointer;" title="Annulla">✕</button>
+      </div>
+    </div>
+  `;
+
+  controlWrapper.appendChild(badge);
+  controlWrapper.appendChild(barComandi);
+
   const firstCard = document.querySelector('.card') || document.querySelector('input')?.closest('div')?.parentElement;
   if (firstCard && firstCard.parentNode) {
-    firstCard.parentNode.insertBefore(badge, firstCard);
+    firstCard.parentNode.insertBefore(controlWrapper, firstCard);
   } else {
-    document.body.prepend(badge);
+    document.body.prepend(controlWrapper);
+  }
+
+  let presaAttualmenteAccesa = false;
+
+  function calcolaProssimoTimestamp(timeStr) {
+    const [hh, mm] = timeStr.split(':').map(Number);
+    const adesso = new Date();
+    const target = new Date(adesso.getFullYear(), adesso.getMonth(), adesso.getDate(), hh, mm, 0, 0);
+    if (target.getTime() <= adesso.getTime()) target.setDate(target.getDate() + 1);
+    return target.getTime();
+  }
+
+  function formattaOraDaTs(ts) {
+    const dt = new Date(ts);
+    return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
   }
 
   function aggiornaVisibilitaReset(d) {
@@ -942,28 +986,53 @@ if(!loadSession()){
     const watt = (d && d.wattAttuali) || 0;
     const staCaricando = Boolean(d && (d.stato === 'in_corso' || watt > 50));
     const haDatiDaResettare = Boolean((session && session.startTs) || (d && (d.stato === 'pausa' || (d.kwhImmesso || 0) > 0 || (d.secondiAccumulati || 0) > 0)));
-
     if (staCaricando) {
-      // Presa attiva (> 50W): reset nascosto per impedire azzeramenti accidentali
       btnSessione.style.display = 'none';
     } else if (haDatiDaResettare) {
-      // Presa ferma (< 50W) con sessione in memoria: reset disponibile
       btnSessione.style.display = 'block';
       btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
     } else {
       btnSessione.style.display = 'none';
     }
   }
-
   function aggiornaUI(d) {
-    if (!d) {
-      aggiornaVisibilitaReset(null);
-      return;
-    }
+    if (!d) { aggiornaVisibilitaReset(null); return; }
     const kwh = (d.kwhImmesso || 0).toFixed(2);
     const watt = d.wattAttuali || 0;
     const kw = d.kwAttuali || 0;
     const staCaricando = (d.stato === 'in_corso' || watt > 50);
+    presaAttualmenteAccesa = Boolean(d.presaAccesa || staCaricando);
+
+    const btnToggle = document.getElementById('btn-toggle-presa');
+    if (btnToggle) {
+      btnToggle.innerHTML = presaAttualmenteAccesa ? '🔌 Spegni Presa Ora' : '⚡ Accendi Presa Ora';
+      btnToggle.style.background = presaAttualmenteAccesa ? '#fee2e2' : '#dcfce7';
+      btnToggle.style.color = presaAttualmenteAccesa ? '#b91c1c' : '#15803d';
+    }
+
+    const inputAccendi = document.getElementById('ora-accensione');
+    const btnCancAccendi = document.getElementById('btn-canc-accendi');
+    if (inputAccendi && btnCancAccendi) {
+      if (d.accensioneProgrammataTs && d.accensioneProgrammataTs > Date.now()) {
+        if (document.activeElement !== inputAccendi) inputAccendi.value = formattaOraDaTs(d.accensioneProgrammataTs);
+        btnCancAccendi.style.display = 'inline-block';
+      } else {
+        if (document.activeElement !== inputAccendi) inputAccendi.value = '';
+        btnCancAccendi.style.display = 'none';
+      }
+    }
+
+    const inputSpegni = document.getElementById('ora-spegnimento');
+    const btnCancSpegni = document.getElementById('btn-canc-spegni');
+    if (inputSpegni && btnCancSpegni) {
+      if (d.spegnimentoProgrammatoTs && d.spegnimentoProgrammatoTs > Date.now()) {
+        if (document.activeElement !== inputSpegni) inputSpegni.value = formattaOraDaTs(d.spegnimentoProgrammatoTs);
+        btnCancSpegni.style.display = 'inline-block';
+      } else {
+        if (document.activeElement !== inputSpegni) inputSpegni.value = '';
+        btnCancSpegni.style.display = 'none';
+      }
+    }
 
     let secondiTotali = d.secondiAccumulati || 0;
     if (d.stato === 'in_corso' && d.inizioSegmentoTs) {
@@ -972,28 +1041,21 @@ if(!loadSession()){
 
     if (staCaricando) {
       badge.innerHTML = `🟢 IN CARICA: <b>${watt} W</b> (${kw} kW)<br>⚡ Energia reale immessa: <b>${kwh} kWh</b>`;
-      badge.style.background = '#ecfdf5';
-      badge.style.color = '#15803d';
-      badge.style.borderColor = '#86efac';
+      badge.style.background = '#ecfdf5'; badge.style.color = '#15803d';
+    } else if (d.presaAccesa) {
+      badge.innerHTML = `🟡 PRESA ACCESA MA IN ATTESA (${watt} W)<br>⚡ Energia accumulata: <b>${kwh} kWh</b>`;
+      badge.style.background = '#fefce8'; badge.style.color = '#a16207';
     } else if (d.stato === 'pausa' || (session && session.startTs)) {
       badge.innerHTML = `🟡 RICARICA IN PAUSA (${watt} W)<br>⚡ Energia accumulata: <b>${kwh} kWh</b>`;
-      badge.style.background = '#fefce8';
-      badge.style.color = '#a16207';
-      badge.style.borderColor = '#fde047';
+      badge.style.background = '#fefce8'; badge.style.color = '#a16207';
     } else {
-      badge.innerHTML = `🔴 PRESA IN ATTESA (${watt} W)<br>⚡ Energia immessa: <b>${kwh} kWh</b>`;
-      badge.style.background = '#fef2f2';
-      badge.style.color = '#b91c1c';
-      badge.style.borderColor = '#fca5a5';
+      badge.innerHTML = `🔴 PRESA SPENTA (${watt} W)<br>⚡ Energia immessa: <b>${kwh} kWh</b>`;
+      badge.style.background = '#fef2f2'; badge.style.color = '#b91c1c';
     }
 
     window.presaReale = {
-      verificata: true,
-      accesa: staCaricando,
-      watt: watt,
-      kw: kw,
-      inCarica: staCaricando,
-      lastPauseTs: staCaricando ? null : Date.now()
+      verificata: true, accesa: presaAttualmenteAccesa, watt, kw,
+      inCarica: staCaricando, lastPauseTs: staCaricando ? null : Date.now()
     };
 
     if (staCaricando) {
@@ -1001,63 +1063,82 @@ if(!loadSession()){
         if (typeof setNow === 'function') setNow(false, false);
         if (typeof toggleSession === 'function') toggleSession();
       }
-      if (session) {
-        session.startTs = Date.now() - (secondiTotali * 1000);
-      }
+      if (session) session.startTs = Date.now() - (secondiTotali * 1000);
     }
 
     if (typeof tick === 'function') tick();
     aggiornaVisibilitaReset(d);
   }
 
+  document.getElementById('btn-toggle-presa').addEventListener('click', async () => {
+    const nuovoStato = presaAttualmenteAccesa ? 0 : 1;
+    if (nuovoStato === 0 && window.presaReale && window.presaReale.inCarica) {
+      if (!confirm('La ricarica è in corso. Vuoi davvero spegnere la presa?')) return;
+    }
+    const btnToggle = document.getElementById('btn-toggle-presa');
+    btnToggle.textContent = nuovoStato === 1 ? '⏳ Accensione...' : '⏳ Spegnimento...';
+    try {
+      const res = await fetch(`${FN_URL}?toggle=${nuovoStato}`);
+      const data = await res.json();
+      if (data && data.statoDb) aggiornaUI(data.statoDb);
+    } catch (e) { badge.innerHTML = '⚠️ Errore invio comando alla presa'; }
+  });
+
+  document.getElementById('ora-accensione').addEventListener('change', async (e) => {
+    if (!e.target.value) return;
+    const ts = calcolaProssimoTimestamp(e.target.value);
+    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accensioneProgrammataTs: ts }) }).catch(() => {});
+    document.getElementById('btn-canc-accendi').style.display = 'inline-block';
+  });
+
+  document.getElementById('btn-canc-accendi').addEventListener('click', async () => {
+    document.getElementById('ora-accensione').value = '';
+    document.getElementById('btn-canc-accendi').style.display = 'none';
+    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accensioneProgrammataTs: null }) }).catch(() => {});
+  });
+
+  document.getElementById('ora-spegnimento').addEventListener('change', async (e) => {
+    if (!e.target.value) return;
+    const ts = calcolaProssimoTimestamp(e.target.value);
+    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spegnimentoProgrammatoTs: ts }) }).catch(() => {});
+    document.getElementById('btn-canc-spegni').style.display = 'inline-block';
+  });
+
+  document.getElementById('btn-canc-spegni').addEventListener('click', async () => {
+    document.getElementById('ora-spegnimento').value = '';
+    document.getElementById('btn-canc-spegni').style.display = 'none';
+    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spegnimentoProgrammatoTs: null }) }).catch(() => {});
+  });
   async function salvaSoloParametri() {
     const payload = {
-      inKm: +elKm.value || 0,
-      inPerc: +elPerc.value || 0,
+      inKm: +elKm.value || 0, inPerc: +elPerc.value || 0,
       targetP: +document.getElementById('tP').value || 80,
       targetK: +document.getElementById('tK').value || 300,
       mode: typeof m !== 'undefined' ? m : 'p'
     };
-    await fetch(DB_URL, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).catch(() => {});
+    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
   }
 
   ['inKm', 'inPerc', 'tP', 'tK'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', salvaSoloParametri);
   });
-  
-  const NUOVO_HOST = 'calcolo-ricarica-2.' + 'netlify.app';
-  const FN_URL = 'https://' + NUOVO_HOST + '/.netlify/functions/check-meross';
 
   async function aggiornaDaPresa() {
     try {
       const res = await fetch(FN_URL);
       const data = await res.json();
-      if (data && data.statoDb) {
-        aggiornaUI(data.statoDb);
-      } else {
-        const fbData = await fetch(DB_URL).then(r => r.json());
-        if (fbData) aggiornaUI(fbData);
-      }
-    } catch (e) {
-      badge.innerHTML = '⚠️ Errore lettura presa in tempo reale';
-    }
+      if (data && data.statoDb) aggiornaUI(data.statoDb);
+    } catch (e) { badge.innerHTML = '⚠️ Errore lettura presa'; }
   }
 
-  // Crea il contenitore dello Storico Ricariche sotto il pulsante principale
+  // Storico Ricariche
   const storicoBox = document.createElement('div');
   storicoBox.id = 'storico-box';
   storicoBox.style.cssText = 'margin-top:16px; padding:16px; border-radius:18px; background:#ffffff; box-shadow:0 2px 10px rgba(0,0,0,0.04); border:1px solid #e2e8f0; font-size:13px; color:#334155;';
   storicoBox.innerHTML = '<div style="font-weight:800; font-size:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span>📊 Storico Ricariche</span><span id="storico-tot" style="font-size:12px; color:#15803d; background:#ecfdf5; padding:3px 8px; border-radius:10px;">0.00 kWh totali</span></div><div id="storico-lista" style="color:#64748b; font-size:12px;">Caricamento storico...</div>';
-  if (btnSessione && btnSessione.parentNode) {
-    btnSessione.parentNode.insertBefore(storicoBox, btnSessione.nextSibling);
-  } else {
-    document.body.appendChild(storicoBox);
-  }
+  if (btnSessione && btnSessione.parentNode) btnSessione.parentNode.insertBefore(storicoBox, btnSessione.nextSibling);
+  else document.body.appendChild(storicoBox);
 
   const STORICO_URL = 'https://' + DB_HOST + '/storico_ricariche.json';
 
@@ -1066,22 +1147,17 @@ if(!loadSession()){
       const data = await fetch(STORICO_URL).then(r => r.json());
       const listaEl = document.getElementById('storico-lista');
       const totEl = document.getElementById('storico-tot');
-      if (!data) {
-        listaEl.innerHTML = 'Nessuna ricarica salvata nello storico.';
-        totEl.textContent = '0.00 kWh totali';
-        return;
-      }
+      if (!data) { listaEl.innerHTML = 'Nessuna ricarica salvata nello storico.'; totEl.textContent = '0.00 kWh totali'; return; }
       const voci = Object.entries(data).sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
       const sommaKwh = voci.reduce((acc, [, v]) => acc + (Number(v.kwh) || 0), 0);
       totEl.textContent = `${sommaKwh.toFixed(2)} kWh totali`;
-
       listaEl.innerHTML = voci.map(([id, v]) => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #f1f5f9;">
           <div>
             <div style="font-weight:700; color:#1e293b;">${v.dataStr} • ⚡ ${Number(v.kwh).toFixed(2)} kWh</div>
             <div style="font-size:11px; color:#64748b;">Durata: ${v.durataStr} | Batteria: ${v.percIn}% → ${v.percOut}%</div>
           </div>
-          <button type="button" onclick="eliminaVoceStorico('${id}')" style="background:none; border:none; color:#ef4444; font-size:15px; cursor:pointer; padding:4px 8px;" title="Elimina">🗑️</button>
+          <button type="button" onclick="eliminaVoceStorico('${id}')" style="background:none; border:none; color:#ef4444; font-size:15px; cursor:pointer; padding:4px 8px;">🗑️</button>
         </div>
       `).join('');
     } catch (e) {}
@@ -1089,80 +1165,41 @@ if(!loadSession()){
 
   window.eliminaVoceStorico = async function(id) {
     if (!confirm('Eliminare questa ricarica dallo storico?')) return;
-    const itemUrl = 'https://' + DB_HOST + '/storico_ricariche/' + id + '.json';
-    await fetch(itemUrl, { method: 'DELETE' }).catch(() => {});
+    await fetch('https://' + DB_HOST + '/storico_ricariche/' + id + '.json', { method: 'DELETE' }).catch(() => {});
     caricaStorico();
   };
 
   if (btnSessione) {
     btnSessione.onclick = async function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
+      e.preventDefault(); e.stopPropagation();
       if (window.presaReale && window.presaReale.inCarica) return;
-
       badge.innerHTML = '⏳ Salvataggio storico e azzeramento...';
-
-      // Legge i dati attuali da Firebase prima di azzerarli per salvarli nello storico
       const datiAttuali = await fetch(DB_URL).then(r => r.json()).catch(() => null);
-      if (datiAttuali && (Number(datiAttuali.kwhImmesso) >= 0.05 || (Number(datiAttuali.secondiAccumulati) >= 300))) {
+      if (datiAttuali && (Number(datiAttuali.kwhImmesso) >= 0.05 || Number(datiAttuali.secondiAccumulati) >= 300)) {
         const adesso = new Date();
         const dataStr = adesso.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' + adesso.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
         const secTot = Math.round(datiAttuali.secondiAccumulati || 0);
-        const ore = Math.floor(secTot / 3600);
-        const min = Math.floor((secTot % 3600) / 60);
-        const durataStr = `${ore}h ${String(min).padStart(2, '0')}m`;
-
+        const durataStr = `${Math.floor(secTot / 3600)}h ${String(Math.floor((secTot % 3600) / 60)).padStart(2, '0')}m`;
         const percIn = Number(datiAttuali.inPerc || elPerc.value || 0);
         const { v, kp } = getParams();
-        const percPerOra = v / kp;
-        const percOut = Math.min(100, Math.round(percIn + (secTot / 3600) * percPerOra));
-
+        const percOut = Math.min(100, Math.round(percIn + (secTot / 3600) * (v / kp)));
         await fetch(STORICO_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ts: Date.now(),
-            dataStr,
-            kwh: Number(datiAttuali.kwhImmesso || 0),
-            durataStr,
-            percIn,
-            percOut
-          })
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ts: Date.now(), dataStr, kwh: Number(datiAttuali.kwhImmesso || 0), durataStr, percIn, percOut })
         }).catch(() => {});
       }
-
       if (typeof SESSION_KEY !== 'undefined') localStorage.removeItem(SESSION_KEY);
-      if (typeof session !== 'undefined' && session && session.startTs && typeof toggleSession === 'function') {
-        toggleSession();
-      }
+      if (typeof session !== 'undefined' && session && session.startTs && typeof toggleSession === 'function') toggleSession();
       session = null;
-
       window.presaReale = { verificata: true, accesa: false, watt: 0, kw: 0, inCarica: false, lastPauseTs: Date.now() };
-      const resetPayload = {
-        stato: 'attesa',
-        secondiAccumulati: 0,
-        inizioSegmentoTs: null,
-        kwhImmesso: 0,
-        wattAttuali: 0,
-        kwAttuali: 0
-      };
-      await fetch(DB_URL, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(resetPayload)
-      }).catch(() => {});
-
+      const resetPayload = { stato: 'attesa', secondiAccumulati: 0, inizioSegmentoTs: null, kwhImmesso: 0, wattAttuali: 0, kwAttuali: 0 };
+      await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(resetPayload) }).catch(() => {});
       aggiornaUI(resetPayload);
       caricaStorico();
     };
   }
 
-  badge.addEventListener('click', () => {
-    badge.innerHTML = '⏳ Lettura presa in corso...';
-    aggiornaDaPresa();
-  });
-
+  badge.addEventListener('click', () => { badge.innerHTML = '⏳ Lettura presa in corso...'; aggiornaDaPresa(); });
   aggiornaVisibilitaReset(null);
   caricaStorico();
   fetch(DB_URL).then(r => r.json()).then(aggiornaUI).catch(() => {});
@@ -1172,3 +1209,4 @@ if(!loadSession()){
 </script>
 </body>
 </html>
+
