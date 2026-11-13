@@ -4,6 +4,7 @@ const mqtt = require('mqtt');
 const PRESA_UUID = '26030559847382513701c4e7ae28c239';
 const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
 const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
+const DEFAULT_MQTT = ['mqtt-eu-4', 'meross', 'com'].join('.');
 
 function queryDeviceMqtt(userId, key, domain, uuid, namespace) {
   return new Promise((resolve) => {
@@ -16,7 +17,7 @@ function queryDeviceMqtt(userId, key, domain, uuid, namespace) {
     const timestamp = Math.floor(Date.now() / 1000);
     const sign = crypto.createHash('md5').update(messageId + key + timestamp).digest('hex');
 
-    const brokerUrl = `mqtts://${domain || '://meross.com'}:2001`;
+    const brokerUrl = `mqtts://${domain || DEFAULT_MQTT}:2001`;
     const client = mqtt.connect(brokerUrl, {
       clientId,
       username: userId,
@@ -67,13 +68,28 @@ function queryDeviceMqtt(userId, key, domain, uuid, namespace) {
 }
 
 exports.handler = async function (event) {
+  const corsHeaders = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers: corsHeaders, body: '' };
+  }
+
   try {
     const userid = (process.env.MEROSS_USERID || '').trim();
     const key = (process.env.MEROSS_KEY || '').trim();
-    const domain = (process.env.MEROSS_DOMAIN || '://meross.com').trim();
+    const domain = (process.env.MEROSS_DOMAIN || DEFAULT_MQTT).trim();
 
     if (!userid || !key) {
-      return { statusCode: 400, body: JSON.stringify({ errore: 'Chiavi Meross mancanti su Netlify' }) };
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ errore: 'Chiavi Meross mancanti su Netlify' })
+      };
     }
 
     const [sysData, elecData, fbRes] = await Promise.all([
@@ -83,7 +99,11 @@ exports.handler = async function (event) {
     ]);
 
     if (!sysData) {
-      return { statusCode: 504, body: JSON.stringify({ errore: 'Presa Ricarica AUTO non raggiungibile' }) };
+      return {
+        statusCode: 504,
+        headers: corsHeaders,
+        body: JSON.stringify({ errore: 'Presa Ricarica AUTO non raggiungibile' })
+      };
     }
 
     let accesa = false;
@@ -98,7 +118,6 @@ exports.handler = async function (event) {
       ? Math.round(elecData.electricity.power / 1000)
       : 0;
     const kw = Number((watt / 1000).toFixed(2));
-    // Considera in carica se potenza > 50W (anche se togglex non risponde come previsto)
     const inCarica = watt > 50;
 
     const now = Date.now();
@@ -118,17 +137,14 @@ exports.handler = async function (event) {
       statoDb.kwhImmesso = 0;
     } else if (inCarica) {
       if (statoDb.stato === 'in_corso' && statoDb.ultimoCheckTs) {
-        // Calcola i kWh reali immessi nell'intervallo trascorso dall'ultimo check (max 15 min per sicurezza)
         const deltaSec = Math.max(0, Math.min(900, (now - statoDb.ultimoCheckTs) / 1000));
         const kwMedio = ((statoDb.kwAttuali || kw) + kw) / 2;
         statoDb.kwhImmesso = Number(((statoDb.kwhImmesso || 0) + (kwMedio * (deltaSec / 3600))).toFixed(3));
       } else if (statoDb.stato !== 'in_corso') {
-        // Primo rilevamento di carica (> 50W): avvia subito il cronometro
         statoDb.stato = 'in_corso';
         statoDb.inizioSegmentoTs = now;
       }
     } else {
-      // Potenza <= 50W: mette in pausa congelando i secondi accumulati
       if (statoDb.stato === 'in_corso') {
         if (statoDb.inizioSegmentoTs) {
           statoDb.secondiAccumulati = (statoDb.secondiAccumulati || 0) + Math.max(0, (now - statoDb.inizioSegmentoTs) / 1000);
@@ -149,13 +165,9 @@ exports.handler = async function (event) {
       body: JSON.stringify(statoDb)
     });
 
-        return {
+    return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         nome: 'Ricarica AUTO',
         accesa: statoDb.presaAccesa,
@@ -165,4 +177,11 @@ exports.handler = async function (event) {
         statoDb
       })
     };
-
+  } catch (err) {
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ errore: err.message })
+    };
+  }
+};
