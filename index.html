@@ -647,6 +647,8 @@ function updatePresets(ka,pa,maxKm,curVal){
   }
 }
 
+let spegnimentoManuale = false;
+
 function calc(enforceMin=false, sync=false){
   const rc=document.getElementById('rc'),s2=document.getElementById('step2'),btnAct=document.getElementById('btnAction');
   let {v,kp,pk}=getParams();
@@ -683,47 +685,77 @@ function calc(enforceMin=false, sync=false){
     if(elTK.value===''||+elTK.value<ka) elTK.value=ka;
   }
 
-  // Verifica se sono impostati sia Accensione sia Spegnimento per calcolare l'autonomia attesa nella finestra
   const inpAcc = document.getElementById('ora-accensione');
   const inpSpeg = document.getElementById('ora-spegnimento');
-  if (inpAcc && inpSpeg && inpAcc.value && inpSpeg.value) {
-    const [h1, m1] = inpAcc.value.split(':').map(Number);
-    const [h2, m2] = inpSpeg.value.split(':').map(Number);
-    let diffMin = (h2 * 60 + m2) - (h1 * 60 + m1);
-    if (diffMin <= 0) diffMin += 1440; // Gestisce il passaggio oltre la mezzanotte
-    currentDurationH = diffMin / 60;
+  const lblSpeg = document.getElementById('lbl-spegni');
+  const btnCancSpeg = document.getElementById('btn-canc-spegni');
 
+  const adesso = new Date();
+  let startTs = adesso.getTime();
+  if (inpAcc && inpAcc.value) {
+    const [h1, m1] = inpAcc.value.split(':').map(Number);
+    const dtAcc = new Date(adesso.getFullYear(), adesso.getMonth(), adesso.getDate(), h1, m1, 0, 0);
+    if (dtAcc.getTime() <= startTs) dtAcc.setDate(dtAcc.getDate() + 1);
+    startTs = dtAcc.getTime();
+  }
+
+  if (spegnimentoManuale && inpSpeg && inpSpeg.value) {
+    const [h2, m2] = inpSpeg.value.split(':').map(Number);
+    const dtSpeg = new Date(adesso.getFullYear(), adesso.getMonth(), adesso.getDate(), h2, m2, 0, 0);
+    if (dtSpeg.getTime() <= startTs) dtSpeg.setDate(dtSpeg.getDate() + 1);
+
+    currentDurationH = Math.max(0, (dtSpeg.getTime() - startTs) / 3600000);
     const gainedPerc = currentDurationH * percPerOraReale;
     const finalPerc = Math.min(100, Math.round(pa + gainedPerc));
     const finalKm = Math.min(maxKm, Math.round(ka + (gainedPerc * kpReale)));
 
-    document.getElementById('rl').textContent = 'Autonomia attesa (Finestra)';
+    document.getElementById('rl').textContent = 'Autonomia attesa (Orario fisso)';
     document.getElementById('rv').textContent = `${finalKm} km (${finalPerc}%)`;
     document.getElementById('rt').textContent = fmt(currentDurationH);
     document.getElementById('rf').textContent = inpSpeg.value;
-    s2.classList.add('dis'); // Disattiva la scelta target manuale perché comanda la finestra oraria
-  } else if(m==='p'){
-    if(+elTP.value>100) elTP.value=100;
-    const tp=Math.max(pa,+elTP.value||0),dp=Math.max(0,tp-pa),dk=dp*kpReale;
-    currentDurationH = dp / percPerOraReale;
-    document.getElementById('rl').textContent='Autonomia finale (km)';
-    document.getElementById('rv').textContent=Math.round(ka+dk)+" km";
-    document.getElementById('rt').textContent=fmt(currentDurationH);
-    const startStr = (inpAcc && inpAcc.value) ? inpAcc.value : document.getElementById('inTime').value;
-    document.getElementById('inTime').value = startStr;
-    document.getElementById('rf').innerHTML=calcEndTime(currentDurationH);
-    updatePresets(ka,pa,maxKm,tp);
-  }else{
-    if(+elTK.value>maxKm) elTK.value=maxKm;
-    const tk=Math.max(ka,+elTK.value||0),dk=Math.max(0,tk-ka),dp=dk*pkReale,pf=Math.min(100,Math.round(pa+dp));
-    currentDurationH = dp / percPerOraReale;
-    document.getElementById('rl').textContent='Autonomia finale (%)';
-    document.getElementById('rv').textContent=pf+"%";
-    document.getElementById('rt').textContent=fmt(currentDurationH);
-    const startStr = (inpAcc && inpAcc.value) ? inpAcc.value : document.getElementById('inTime').value;
-    document.getElementById('inTime').value = startStr;
-    document.getElementById('rf').innerHTML=calcEndTime(currentDurationH);
-    updatePresets(ka,pa,maxKm,tk);
+    s2.classList.add('dis');
+    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (FISSO)';
+    if (btnCancSpeg) btnCancSpeg.style.display = 'inline-block';
+  } else {
+    s2.classList.remove('dis');
+    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (AUTO)';
+    if (btnCancSpeg) btnCancSpeg.style.display = 'none';
+
+    if(m==='p'){
+      if(+elTP.value>100) elTP.value=100;
+      const tp=Math.max(pa,+elTP.value||0),dp=Math.max(0,tp-pa),dk=dp*kpReale;
+      currentDurationH = dp / percPerOraReale;
+      document.getElementById('rl').textContent='Autonomia finale (km)';
+      document.getElementById('rv').textContent=Math.round(ka+dk)+" km";
+      updatePresets(ka,pa,maxKm,tp);
+    }else{
+      if(+elTK.value>maxKm) elTK.value=maxKm;
+      const tk=Math.max(ka,+elTK.value||0),dk=Math.max(0,tk-ka),dp=dk*pkReale,pf=Math.min(100,Math.round(pa+dp));
+      currentDurationH = dp / percPerOraReale;
+      document.getElementById('rl').textContent='Autonomia finale (%)';
+      document.getElementById('rv').textContent=pf+"%";
+      updatePresets(ka,pa,maxKm,tk);
+    }
+
+    const endTs = startTs + Math.round(currentDurationH * 3600000);
+    const dtEnd = new Date(endTs);
+    const endStr = String(dtEnd.getHours()).padStart(2, '0') + ':' + String(dtEnd.getMinutes()).padStart(2, '0');
+    const isNextDay = dtEnd.getDate() !== adesso.getDate();
+
+    document.getElementById('rt').textContent = fmt(currentDurationH);
+    document.getElementById('rf').innerHTML = isNextDay ? `${endStr}<small>+1g</small>` : endStr;
+
+    if (inpSpeg && document.activeElement !== inpSpeg) {
+      inpSpeg.value = currentDurationH > 0 ? endStr : '';
+    }
+
+    if (window.DB_URL_LIVE && currentDurationH > 0.01) {
+      fetch(window.DB_URL_LIVE, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spegnimentoProgrammatoTs: endTs, spegnimentoManuale: false })
+      }).catch(() => {});
+    }
   }
 
   if(session){
@@ -738,7 +770,7 @@ function calc(enforceMin=false, sync=false){
   if(sync) pushCloud();
 }
 
-function saveSession(sync=false){
+  function saveSession(sync=false){
   try{ localStorage.setItem(SESSION_KEY,JSON.stringify(session)); }catch(e){}
   if(sync) pushCloud();
 }
@@ -928,24 +960,21 @@ if(!loadSession()){
   setNow(false, false);
   calc(false, false);
 }
-
 // --- GESTIONE RICARICA REALE CON FIREBASE E MEROSS ---
 (function initSistemaHardware() {
   const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
   const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
+  window.DB_URL_LIVE = DB_URL;
   const NUOVO_HOST = 'calcolo-ricarica-2.' + 'netlify.app';
   const FN_URL = 'https://' + NUOVO_HOST + '/.netlify/functions/check-meross';
   const btnSessione = document.querySelector('button[onclick*="toggleSession"]');
 
-  // Nasconde i campanellini e disattiva il segnale acustico
   document.querySelectorAll('[onclick*="toggleSound"], .sound-btn, .bell-btn').forEach(el => el.style.display = 'none');
   window.triggerAlert = function() {};
 
-  // Nasconde la vecchia scheda ridondante "Orario di partenza"
   const oldStepTime = document.getElementById('stepTime');
   if (oldStepTime) oldStepTime.style.display = 'none';
 
-  // Pannello superiore: Stato Presa + Interruttore + Accensione/Spegnimento Programmati (caratteri grandi)
   const controlWrapper = document.createElement('div');
   controlWrapper.style.cssText = 'margin-bottom:16px; border-radius:20px; background:#ffffff; box-shadow:0 4px 14px rgba(0,0,0,0.05); border:1px solid #e2e8f0; overflow:hidden;';
 
@@ -958,23 +987,31 @@ if(!loadSession()){
   const barComandi = document.createElement('div');
   barComandi.style.cssText = 'display:flex; flex-direction:column; gap:12px; padding:14px 16px; background:#f8fafc; border-top:1px solid #e2e8f0;';
   barComandi.innerHTML = `
-    <button type="button" id="btn-toggle-presa" style="width:100%; padding:13px 16px; border:none; border-radius:14px; font-weight:800; font-size:15px; cursor:pointer; background:#e2e8f0; color:#334155; transition:all 0.2s;">
+    <button type="button" id="btn-toggle-presa" style="width:100%; padding:15px 16px; border:none; border-radius:16px; font-weight:800; font-size:16px; cursor:pointer; background:#e2e8f0; color:#334155; transition:all 0.2s;">
       ⏳ Verifica presa...
     </button>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-      <div style="background:#ffffff; padding:10px 12px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; align-items:center;">
-        <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="font-size:12px; font-weight:800; color:#15803d; text-transform:uppercase;">🟢 Accendi</span>
-          <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:2px 7px; font-size:11px; font-weight:800; cursor:pointer;" title="Annulla">✕</button>
-        </div>
-        <input type="time" id="ora-accensione" style="width:100%; text-align:center; border:none; font-size:22px; font-weight:800; color:#0f172a; background:transparent; outline:none; padding:2px 0;">
+
+    <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; font-weight:800; color:#15803d; text-transform:uppercase; letter-spacing:0.3px;">🟢 Accendi alle</span>
+        <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Annulla ✕</button>
       </div>
-      <div style="background:#ffffff; padding:10px 12px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; align-items:center;">
-        <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="font-size:12px; font-weight:800; color:#b91c1c; text-transform:uppercase;">🔴 Spegni</span>
-          <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:2px 7px; font-size:11px; font-weight:800; cursor:pointer;" title="Annulla">✕</button>
-        </div>
-        <input type="time" id="ora-spegnimento" style="width:100%; text-align:center; border:none; font-size:22px; font-weight:800; color:#0f172a; background:transparent; outline:none; padding:2px 0;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <button type="button" onclick="spostaOrario('ora-accensione', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
+        <input type="time" id="ora-accensione" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
+        <button type="button" onclick="spostaOrario('ora-accensione', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
+      </div>
+    </div>
+
+    <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span id="lbl-spegni" style="font-size:13px; font-weight:800; color:#b91c1c; text-transform:uppercase; letter-spacing:0.3px;">🔴 Spegni (Auto)</span>
+        <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Torna Auto ✕</button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <button type="button" onclick="spostaOrario('ora-spegnimento', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
+        <input type="time" id="ora-spegnimento" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
+        <button type="button" onclick="spostaOrario('ora-spegnimento', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
       </div>
     </div>
   `;
@@ -983,11 +1020,26 @@ if(!loadSession()){
   controlWrapper.appendChild(barComandi);
 
   const firstCard = document.querySelector('.card') || document.querySelector('input')?.closest('div')?.parentElement;
-  if (firstCard && firstCard.parentNode) {
-    firstCard.parentNode.insertBefore(controlWrapper, firstCard);
-  } else {
-    document.body.prepend(controlWrapper);
-  }
+  if (firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(controlWrapper, firstCard);
+  else document.body.prepend(controlWrapper);
+
+  window.spostaOrario = function(idInput, deltaMin) {
+    const inp = document.getElementById(idInput);
+    if (!inp) return;
+    let baseMin;
+    if (inp.value) {
+      const [h, m] = inp.value.split(':').map(Number);
+      baseMin = h * 60 + m;
+    } else {
+      const now = new Date();
+      baseMin = now.getHours() * 60 + now.getMinutes();
+    }
+    const nuovoTot = ((baseMin + deltaMin) % 1440 + 1440) % 1440;
+    const hh = String(Math.floor(nuovoTot / 60)).padStart(2, '0');
+    const mm = String(nuovoTot % 60).padStart(2, '0');
+    inp.value = `${hh}:${mm}`;
+    inp.dispatchEvent(new Event('change'));
+  };
 
   let presaAttualmenteAccesa = false;
 
@@ -1009,14 +1061,9 @@ if(!loadSession()){
     const watt = (d && d.wattAttuali) || 0;
     const staCaricando = Boolean(d && (d.stato === 'in_corso' || watt > 50));
     const haDatiDaResettare = Boolean((session && session.startTs) || (d && (d.stato === 'pausa' || (d.kwhImmesso || 0) > 0 || (d.secondiAccumulati || 0) > 0)));
-    if (staCaricando) {
-      btnSessione.style.display = 'none';
-    } else if (haDatiDaResettare) {
-      btnSessione.style.display = 'block';
-      btnSessione.textContent = '🔄 Resetta Ricarica e kWh';
-    } else {
-      btnSessione.style.display = 'none';
-    }
+    if (staCaricando) btnSessione.style.display = 'none';
+    else if (haDatiDaResettare) { btnSessione.style.display = 'block'; btnSessione.textContent = '🔄 Resetta Ricarica e kWh'; }
+    else btnSessione.style.display = 'none';
   }
   function aggiornaUI(d) {
     if (!d) { aggiornaVisibilitaReset(null); return; }
@@ -1045,15 +1092,15 @@ if(!loadSession()){
       }
     }
 
+    spegnimentoManuale = Boolean(d.spegnimentoManuale);
     const inputSpegni = document.getElementById('ora-spegnimento');
     const btnCancSpegni = document.getElementById('btn-canc-spegni');
-    if (inputSpegni && btnCancSpegni) {
+    if (inputSpegni && btnCancSpegni && spegnimentoManuale) {
       if (d.spegnimentoProgrammatoTs && d.spegnimentoProgrammatoTs > Date.now()) {
         if (document.activeElement !== inputSpegni) inputSpegni.value = formattaOraDaTs(d.spegnimentoProgrammatoTs);
         btnCancSpegni.style.display = 'inline-block';
       } else {
-        if (document.activeElement !== inputSpegni) inputSpegni.value = '';
-        btnCancSpegni.style.display = 'none';
+        spegnimentoManuale = false;
       }
     }
 
@@ -1125,17 +1172,17 @@ if(!loadSession()){
 
   document.getElementById('ora-spegnimento').addEventListener('change', async (e) => {
     if (!e.target.value) return;
+    spegnimentoManuale = true;
     const ts = calcolaProssimoTimestamp(e.target.value);
     document.getElementById('btn-canc-spegni').style.display = 'inline-block';
     if (typeof calc === 'function') calc(false, false);
-    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spegnimentoProgrammatoTs: ts }) }).catch(() => {});
+    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spegnimentoProgrammatoTs: ts, spegnimentoManuale: true }) }).catch(() => {});
   });
 
   document.getElementById('btn-canc-spegni').addEventListener('click', async () => {
-    document.getElementById('ora-spegnimento').value = '';
+    spegnimentoManuale = false;
     document.getElementById('btn-canc-spegni').style.display = 'none';
     if (typeof calc === 'function') calc(false, false);
-    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spegnimentoProgrammatoTs: null }) }).catch(() => {});
   });
   async function salvaSoloParametri() {
     const payload = {
@@ -1160,7 +1207,6 @@ if(!loadSession()){
     } catch (e) { badge.innerHTML = '⚠️ Errore lettura presa'; }
   }
 
-  // Storico Ricariche
   const storicoBox = document.createElement('div');
   storicoBox.id = 'storico-box';
   storicoBox.style.cssText = 'margin-top:16px; padding:16px; border-radius:18px; background:#ffffff; box-shadow:0 2px 10px rgba(0,0,0,0.04); border:1px solid #e2e8f0; font-size:13px; color:#334155;';
@@ -1176,7 +1222,7 @@ if(!loadSession()){
       const listaEl = document.getElementById('storico-lista');
       const totEl = document.getElementById('storico-tot');
       if (!data) { listaEl.innerHTML = 'Nessuna ricarica salvata nello storico.'; totEl.textContent = '0.00 kWh totali'; return; }
-      const voci = Object.entries(data).sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
+      const voci = Object.entries(data).sort((a, b) => (b.ts || 0) - (a.ts || 0));
       const sommaKwh = voci.reduce((acc, [, v]) => acc + (Number(v.kwh) || 0), 0);
       totEl.textContent = `${sommaKwh.toFixed(2)} kWh totali`;
       listaEl.innerHTML = voci.map(([id, v]) => `
@@ -1237,3 +1283,4 @@ if(!loadSession()){
 </script>
 </body>
 </html>
+
