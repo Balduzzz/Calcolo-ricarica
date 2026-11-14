@@ -243,7 +243,7 @@ document.getElementById('hardwareMount').innerHTML = `
               <input type="number" id="perc-spegnimento" min="1" max="100" placeholder="--" inputmode="numeric" style="width:56px; height:44px; text-align:left; border:none; font-size:30px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
               <span style="font-size:20px; font-weight:800; color:var(--mut);">%</span>
             </div>
-            <div style="font-size:14px; font-weight:800; color:#b91c1c;" id="subSpeg">Nessuno spegnimento</div>
+            <div style="font-size:12px; font-weight:800; color:#b91c1c;" id="subSpeg">Nessuno spegnimento</div>
           </div>
           <div class="prog-right">
             <button type="button" id="btn-canc-spegni" class="btn-x" style="visibility:hidden;">✕</button>
@@ -291,7 +291,6 @@ function aggiornaVisibilitaX() {
   const inpAcc = document.getElementById('ora-accensione');
   const inpSpeg = document.getElementById('ora-spegnimento');
 
-  // Mostra "--:--" automatico su iPhone/smartphone quando l'orario è vuoto
   [inpAcc, inpSpeg].forEach((inp, idx) => {
     if (!inp) return;
     let ph = document.getElementById('ph-time-' + idx);
@@ -300,9 +299,10 @@ function aggiornaVisibilitaX() {
       ph = document.createElement('span');
       ph.id = 'ph-time-' + idx;
       ph.textContent = '--:--';
-      ph.style.cssText = 'position:absolute; left:0; font-size:30px; font-weight:800; color:var(--mut); opacity:0.45; pointer-events:none;';
+      ph.style.cssText = 'position:absolute; left:0; top:50%; transform:translateY(-50%); font-size:30px; font-weight:800; color:var(--mut); opacity:0.5; pointer-events:none;';
       inp.parentElement.insertBefore(ph, inp);
     }
+    inp.style.color = inp.value ? 'var(--txt)' : 'transparent';
     const nascosto = (idx === 1 && spegniMode !== 'time') || Boolean(inp.value);
     ph.style.display = nascosto ? 'none' : 'block';
   });
@@ -753,14 +753,7 @@ document.getElementById('btn-toggle-presa').addEventListener('click', async () =
   if (nuovoStato === 0 && (liveState.stato === 'in_corso' || (liveState.wattAttuali || 0) > 50)) {
     if (!confirm('La ricarica è in corso. Vuoi davvero spegnere la presa?')) return;
   }
-  document.getElementById('btn-toggle-presa').textContent = nuovoStato === 1 ? '⏳ Accensione...' : '⏳ Spegnimento...';
-  try {
-    const res = await fetch(`${FN_URL}?toggle=${nuovoStato}`);
-    const data = await res.json();
-    if (data && data.statoDb) renderLiveHardware(data.statoDb);
-  } catch (e) { document.getElementById('stato-presa-badge').innerHTML = '⚠️ Errore invio comando alla presa'; }
-});
-
+  
 document.getElementById('btn-toggle-presa').addEventListener('click', async () => {
   const nuovoStato = presaAttualmenteAccesa ? 0 : 1;
   const msg = nuovoStato === 1
