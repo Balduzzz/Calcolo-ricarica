@@ -92,11 +92,19 @@ input.auto{border-style:dashed;opacity:.85}
 <span class="live-badge off" id="liveBadge">OFFLINE</span>
 </div>
 
-<div class="card" id="cardCurrent">
-<div class="ct"><span>AUTONOMIA ATTUALE</span></div>
+<div class="card" id="cardCurrent" style="height:auto;">
+<div class="ct"><span>AUTONOMIA DI PARTENZA</span></div>
 <div class="row">
 <div class="iw"><input type="number" id="inKm" min="0" inputmode="numeric" pattern="[0-9]*" autofocus><span class="u">km</span></div>
 <div class="iw"><input type="number" id="inPerc" min="0" max="100" inputmode="numeric" pattern="[0-9]*"><span class="u">%</span></div>
+</div>
+</div>
+
+<div class="card" id="cardLive" style="height:auto; background:var(--soft); border-color:var(--acc);">
+<div class="ct" style="color:var(--acc);"><span>AUTONOMIA ATTUALE (IN TEMPO REALE)</span></div>
+<div class="row">
+<div class="iw"><input type="text" id="curKmLive" value="--" readonly style="background:var(--card); border-color:var(--acc); color:var(--acc);"><span class="u">km</span></div>
+<div class="iw"><input type="text" id="curPercLive" value="--" readonly style="background:var(--card); border-color:var(--acc); color:var(--acc);"><span class="u">%</span></div>
 </div>
 </div>
 
@@ -652,11 +660,19 @@ let spegnimentoManuale = false;
 function calc(enforceMin=false, sync=false){
   const rc=document.getElementById('rc'),s2=document.getElementById('step2'),btnAct=document.getElementById('btnAction');
   if (s2) s2.style.display = 'none';
+  if (btnAct) btnAct.style.display = 'none';
   let {v,kp,pk}=getParams();
+
+  // Uniforma l'allineamento grafico dei 3 box sopra lo storico
+  document.querySelectorAll('#rc .sb').forEach(box => {
+    box.style.justifyContent = 'center';
+    box.style.alignItems = 'center';
+    box.style.textAlign = 'center';
+    box.style.gap = '6px';
+  });
 
   if(elKm.value===''||elPerc.value===''){
     rc.classList.add('wait');
-    btnAct.disabled=true;
     document.getElementById('rl').textContent='Autonomia finale';
     document.getElementById('rv').textContent='--';
     document.getElementById('rt').textContent='--';
@@ -667,7 +683,6 @@ function calc(enforceMin=false, sync=false){
   }
 
   rc.classList.remove('wait');
-  btnAct.disabled=false;
 
   const ka=Math.max(0,+elKm.value||0),pa=Math.min(100,Math.max(0,+elPerc.value||0));
   const percPerOraReale = v / kp;
@@ -682,7 +697,7 @@ function calc(enforceMin=false, sync=false){
   if (inpAcc && inpAcc.value) {
     const [h1, m1] = inpAcc.value.split(':').map(Number);
     const dtAcc = new Date(adesso.getFullYear(), adesso.getMonth(), adesso.getDate(), h1, m1, 0, 0);
-    if (dtAcc.getTime() <= startTs) dtAcc.setDate(dtAcc.getDate() + 1);
+    if (dtAcc.getTime() < startTs - 60000) dtAcc.setDate(dtAcc.getDate() + 1);
     startTs = dtAcc.getTime();
   }
 
@@ -704,17 +719,10 @@ function calc(enforceMin=false, sync=false){
     currentDurationH = 0;
     document.getElementById('rl').textContent = 'Autonomia finale';
     document.getElementById('rv').innerHTML = `${Math.round(ka)} km<br><span style="font-size:0.75em; opacity:0.85;">(${Math.round(pa)}%)</span>`;
-    document.getElementById('rt').textContent = 'Imposta spegnimento';
+    document.getElementById('rt').textContent = '--';
     document.getElementById('rf').textContent = '--:--';
   }
 
-  if(session){
-    session.mode='p';
-    session.durationMs=Math.round(currentDurationH*3600000);
-    if(session.startTs + session.durationMs > Date.now()) session.endAlerted=false;
-    saveSession(false);
-    renderCountdown();
-  }
   if(sync) pushCloud();
 }
 
@@ -919,11 +927,32 @@ if(!loadSession()){
   document.querySelectorAll('[onclick*="toggleSound"], .sound-btn, .bell-btn').forEach(el => el.style.display = 'none');
   window.triggerAlert = function() {};
 
-  // Nasconde la vecchia scheda "Orario inizio ricarica" e la scheda "Imposta obiettivo"
   const oldStepTime = document.getElementById('stepTime');
   if (oldStepTime) oldStepTime.style.display = 'none';
   const oldStep2 = document.getElementById('step2');
   if (oldStep2) oldStep2.style.display = 'none';
+
+  // Rinomina "AUTONOMIA ATTUALE" in "AUTONOMIA DI PARTENZA" e aggiunge sotto la scheda "AUTONOMIA ATTUALE"
+  const cardPartenza = document.getElementById('cardCurrent');
+  if (cardPartenza) {
+    const titPartenza = cardPartenza.querySelector('.ct span');
+    if (titPartenza) titPartenza.textContent = 'AUTONOMIA DI PARTENZA';
+
+    if (!document.getElementById('cardLiveNow')) {
+      const cardAttuale = document.createElement('div');
+      cardAttuale.className = 'card';
+      cardAttuale.id = 'cardLiveNow';
+      cardAttuale.style.height = '124px';
+      cardAttuale.innerHTML = `
+        <div class="ct"><span>AUTONOMIA ATTUALE</span></div>
+        <div class="row">
+          <div class="iw"><input type="text" id="liveKm" value="--" readonly tabindex="-1"><span class="u">km</span></div>
+          <div class="iw"><input type="text" id="livePerc" value="--" readonly tabindex="-1"><span class="u">%</span></div>
+        </div>
+      `;
+      cardPartenza.parentNode.insertBefore(cardAttuale, cardPartenza.nextSibling);
+    }
+  }
 
   const controlWrapper = document.createElement('div');
   controlWrapper.style.cssText = 'margin-bottom:16px; border-radius:20px; background:#ffffff; box-shadow:0 4px 14px rgba(0,0,0,0.05); border:1px solid #e2e8f0; overflow:hidden;';
@@ -982,7 +1011,6 @@ if(!loadSession()){
   const firstCard = document.querySelector('.card') || document.querySelector('input')?.closest('div')?.parentElement;
   if (firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(controlWrapper, firstCard);
   else document.body.prepend(controlWrapper);
-
   let presaAttualmenteAccesa = false;
   let programmazioneAttiva = false;
 
@@ -1016,33 +1044,6 @@ if(!loadSession()){
     }
   }
 
-  function stepOrarioMinuto(idInput, deltaMin) {
-    if (programmazioneAttiva) return;
-    const inp = document.getElementById(idInput);
-    if (!inp) return;
-    let baseMin;
-    if (inp.value) {
-      const [h, m] = inp.value.split(':').map(Number);
-      baseMin = h * 60 + m;
-    } else {
-      const now = new Date();
-      baseMin = now.getHours() * 60 + now.getMinutes();
-    }
-    const nuovoTot = ((baseMin + deltaMin) % 1440 + 1440) % 1440;
-    const hh = String(Math.floor(nuovoTot / 60)).padStart(2, '0');
-    const mm = String(nuovoTot % 60).padStart(2, '0');
-    inp.value = `${hh}:${mm}`;
-    inp.dispatchEvent(new Event('change'));
-  }
-
-  // Collega le frecce con accelerazione progressiva (bindHold)
-  if (typeof bindHold === 'function') {
-    bindHold('upAcc', () => stepOrarioMinuto('ora-accensione', 1));
-    bindHold('dnAcc', () => stepOrarioMinuto('ora-accensione', -1));
-    bindHold('upSpeg', () => stepOrarioMinuto('ora-spegnimento', 1));
-    bindHold('dnSpeg', () => stepOrarioMinuto('ora-spegnimento', -1));
-  }
-
   function calcolaProssimoTimestamp(timeStr, baseTs = Date.now()) {
     const [hh, mm] = timeStr.split(':').map(Number);
     const baseDate = new Date(baseTs);
@@ -1054,6 +1055,56 @@ if(!loadSession()){
   function formattaOraDaTs(ts) {
     const dt = new Date(ts);
     return String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+  }
+
+  function applicaVincoliOrari(changedId) {
+    const inpAcc = document.getElementById('ora-accensione');
+    const inpSpeg = document.getElementById('ora-spegnimento');
+    const nowTs = Date.now();
+
+    if (inpAcc && inpAcc.value) {
+      const accTs = calcolaProssimoTimestamp(inpAcc.value, nowTs);
+      // Impedisce di andare indietro rispetto all'ora attuale
+      if (accTs - nowTs > 23 * 3600000) {
+        inpAcc.value = formattaOraDaTs(nowTs + 60000);
+      }
+    }
+
+    const startBaseTs = (inpAcc && inpAcc.value) ? calcolaProssimoTimestamp(inpAcc.value, nowTs) : nowTs;
+
+    if (inpSpeg && inpSpeg.value) {
+      const spegTs = calcolaProssimoTimestamp(inpSpeg.value, startBaseTs);
+      // Impedisce che lo spegnimento sia precedente all'orario iniziale (evitando salti a 23h di distanza)
+      if (spegTs - startBaseTs > 23 * 3600000 || changedId === 'ora-accensione' && spegTs <= startBaseTs) {
+        inpSpeg.value = formattaOraDaTs(startBaseTs + 60000);
+      }
+    }
+  }
+
+  function stepOrarioMinuto(idInput, deltaMin) {
+    if (programmazioneAttiva) return;
+    const inp = document.getElementById(idInput);
+    if (!inp) return;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    let baseMin = nowMin;
+    if (inp.value) {
+      const [h, m] = inp.value.split(':').map(Number);
+      baseMin = h * 60 + m;
+    }
+    const nuovoTot = ((baseMin + deltaMin) % 1440 + 1440) % 1440;
+    const hh = String(Math.floor(nuovoTot / 60)).padStart(2, '0');
+    const mm = String(nuovoTot % 60).padStart(2, '0');
+    inp.value = `${hh}:${mm}`;
+    applicaVincoliOrari(idInput);
+    inp.dispatchEvent(new Event('change'));
+  }
+
+  if (typeof bindHold === 'function') {
+    bindHold('upAcc', () => stepOrarioMinuto('ora-accensione', 1));
+    bindHold('dnAcc', () => stepOrarioMinuto('ora-accensione', -1));
+    bindHold('upSpeg', () => stepOrarioMinuto('ora-spegnimento', 1));
+    bindHold('dnSpeg', () => stepOrarioMinuto('ora-spegnimento', -1));
   }
 
   function aggiornaVisibilitaReset(d) {
@@ -1080,35 +1131,66 @@ if(!loadSession()){
       btnToggle.style.color = presaAttualmenteAccesa ? '#b91c1c' : '#15803d';
     }
 
+    const eraAttiva = programmazioneAttiva;
     const hasAcc = Boolean(d.accensioneProgrammataTs && d.accensioneProgrammataTs > Date.now());
     const hasSpeg = Boolean(d.spegnimentoProgrammatoTs && d.spegnimentoProgrammatoTs > Date.now());
-    aggiornaBloccoCampiProgrammazione(hasAcc || hasSpeg);
+    const oraAttiva = hasAcc || hasSpeg;
+    aggiornaBloccoCampiProgrammazione(oraAttiva);
 
     const inputAccendi = document.getElementById('ora-accensione');
     const btnCancAccendi = document.getElementById('btn-canc-accendi');
-    if (inputAccendi && btnCancAccendi) {
-      if (hasAcc) {
-        inputAccendi.value = formattaOraDaTs(d.accensioneProgrammataTs);
-        btnCancAccendi.style.display = 'none';
-      } else if (!programmazioneAttiva) {
-        btnCancAccendi.style.display = inputAccendi.value ? 'inline-block' : 'none';
-      }
-    }
-
     const inputSpegni = document.getElementById('ora-spegnimento');
     const btnCancSpegni = document.getElementById('btn-canc-spegni');
-    if (inputSpegni && btnCancSpegni) {
-      if (hasSpeg) {
-        inputSpegni.value = formattaOraDaTs(d.spegnimentoProgrammatoTs);
-        btnCancSpegni.style.display = 'none';
-      } else if (!programmazioneAttiva) {
-        btnCancSpegni.style.display = inputSpegni.value ? 'inline-block' : 'none';
+
+    // Quando raggiunge la fine ricarica programmata, azzera entrambi gli orari
+    if (eraAttiva && !oraAttiva) {
+      if (inputAccendi) inputAccendi.value = '';
+      if (inputSpegni) inputSpegni.value = '';
+      if (btnCancAccendi) btnCancAccendi.style.display = 'none';
+      if (btnCancSpegni) btnCancSpegni.style.display = 'none';
+    } else {
+      if (inputAccendi && btnCancAccendi) {
+        if (hasAcc) {
+          inputAccendi.value = formattaOraDaTs(d.accensioneProgrammataTs);
+          btnCancAccendi.style.display = 'none';
+        } else if (!oraAttiva) {
+          btnCancAccendi.style.display = inputAccendi.value ? 'inline-block' : 'none';
+        }
+      }
+      if (inputSpegni && btnCancSpegni) {
+        if (hasSpeg) {
+          inputSpegni.value = formattaOraDaTs(d.spegnimentoProgrammatoTs);
+          btnCancSpegni.style.display = 'none';
+        } else if (!oraAttiva) {
+          btnCancSpegni.style.display = inputSpegni.value ? 'inline-block' : 'none';
+        }
       }
     }
 
     let secondiTotali = d.secondiAccumulati || 0;
     if (d.stato === 'in_corso' && d.inizioSegmentoTs) {
       secondiTotali += Math.max(0, (Date.now() - d.inizioSegmentoTs) / 1000);
+    }
+
+    // Aggiorna i due display "AUTONOMIA ATTUALE" con il progresso della ricarica
+    const liveKmEl = document.getElementById('liveKm');
+    const livePercEl = document.getElementById('livePerc');
+    const ka = Math.max(0, +elKm.value || 0);
+    const pa = Math.min(100, Math.max(0, +elPerc.value || 0));
+    if (liveKmEl && livePercEl) {
+      if (elKm.value === '' || elPerc.value === '') {
+        liveKmEl.value = '--';
+        livePercEl.value = '--';
+      } else {
+        const { v, kp } = getParams();
+        const kpReale = (ka > 0 && pa > 0) ? (ka / pa) : kp;
+        const percPerOra = v / kp;
+        const gainedPerc = (secondiTotali / 3600) * percPerOra;
+        const curPerc = Math.min(100, Math.round(pa + gainedPerc));
+        const curKm = Math.min(Math.round(100 * kpReale), Math.round(ka + gainedPerc * kpReale));
+        liveKmEl.value = curKm;
+        livePercEl.value = curPerc;
+      }
     }
 
     if (staCaricando) {
@@ -1158,6 +1240,7 @@ if(!loadSession()){
   });
 
   document.getElementById('ora-accensione').addEventListener('change', (e) => {
+    applicaVincoliOrari('ora-accensione');
     document.getElementById('btn-canc-accendi').style.display = e.target.value ? 'inline-block' : 'none';
     if (typeof calc === 'function') calc(false, false);
   });
@@ -1169,6 +1252,7 @@ if(!loadSession()){
   });
 
   document.getElementById('ora-spegnimento').addEventListener('change', (e) => {
+    applicaVincoliOrari('ora-spegnimento');
     document.getElementById('btn-canc-spegni').style.display = e.target.value ? 'inline-block' : 'none';
     if (typeof calc === 'function') calc(false, false);
   });
@@ -1222,6 +1306,20 @@ if(!loadSession()){
       }
     }
   });
+  // Allinea i 3 riquadri del Risultato Stimato sopra allo Storico Ricariche
+  const rcCard = document.getElementById('rc');
+  if (rcCard) {
+    rcCard.querySelectorAll('.sb').forEach(box => {
+      box.style.height = 'auto';
+      box.style.minHeight = '84px';
+      box.style.padding = '10px 6px';
+      box.style.alignItems = 'center';
+      box.style.textAlign = 'center';
+    });
+    const rvEl = document.getElementById('rv');
+    if (rvEl) rvEl.style.lineHeight = '1.2';
+  }
+
   async function salvaSoloParametri() {
     const payload = {
       inKm: +elKm.value || 0,
@@ -1245,7 +1343,7 @@ if(!loadSession()){
 
   const storicoBox = document.createElement('div');
   storicoBox.id = 'storico-box';
-  storicoBox.style.cssText = 'margin-top:16px; padding:16px; border-radius:18px; background:#ffffff; box-shadow:0 2px 10px rgba(0,0,0,0.04); border:1px solid #e2e8f0; font-size:13px; color:#334155;';
+  storicoBox.style.cssText = 'margin-top:14px; padding:14px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; font-size:13px; color:#334155;';
   storicoBox.innerHTML = '<div style="font-weight:800; font-size:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><span>📊 Storico Ricariche</span><span id="storico-tot" style="font-size:12px; color:#15803d; background:#ecfdf5; padding:3px 8px; border-radius:10px;">0.00 kWh totali</span></div><div id="storico-lista" style="color:#64748b; font-size:12px;">Caricamento storico...</div>';
   if (btnSessione && btnSessione.parentNode) btnSessione.parentNode.insertBefore(storicoBox, btnSessione.nextSibling);
   else document.body.appendChild(storicoBox);
@@ -1258,11 +1356,11 @@ if(!loadSession()){
       const listaEl = document.getElementById('storico-lista');
       const totEl = document.getElementById('storico-tot');
       if (!data) { listaEl.innerHTML = 'Nessuna ricarica salvata nello storico.'; totEl.textContent = '0.00 kWh totali'; return; }
-      const voci = Object.entries(data).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const voci = Object.entries(data).sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
       const sommaKwh = voci.reduce((acc, [, v]) => acc + (Number(v.kwh) || 0), 0);
       totEl.textContent = `${sommaKwh.toFixed(2)} kWh totali`;
       listaEl.innerHTML = voci.map(([id, v]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #f1f5f9;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid #e2e8f0;">
           <div>
             <div style="font-weight:700; color:#1e293b;">${v.dataStr} • ⚡ ${Number(v.kwh).toFixed(2)} kWh</div>
             <div style="font-size:11px; color:#64748b;">Durata: ${v.durataStr} | Batteria: ${v.percIn}% → ${v.percOut}%</div>
