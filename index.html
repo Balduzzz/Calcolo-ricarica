@@ -750,12 +750,6 @@ document.getElementById('btn-canc-spegni').addEventListener('click', () => {
 
 document.getElementById('btn-toggle-presa').addEventListener('click', async () => {
   const nuovoStato = presaAttualmenteAccesa ? 0 : 1;
-  if (nuovoStato === 0 && (liveState.stato === 'in_corso' || (liveState.wattAttuali || 0) > 50)) {
-    if (!confirm('La ricarica è in corso. Vuoi davvero spegnere la presa?')) return;
-  }
-  
-document.getElementById('btn-toggle-presa').addEventListener('click', async () => {
-  const nuovoStato = presaAttualmenteAccesa ? 0 : 1;
   const msg = nuovoStato === 1
     ? 'Vuoi accendere subito la presa?'
     : ((liveState.stato === 'in_corso' || (liveState.wattAttuali || 0) > 50)
