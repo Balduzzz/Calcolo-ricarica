@@ -28,8 +28,16 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 input:focus{border-color:var(--acc)}
 .u{position:absolute;right:12px;font-size:1rem;font-weight:800;color:var(--mut);pointer-events:none}
 input[type="time"]::-webkit-calendar-picker-indicator{display:none;-webkit-appearance:none}
-.arr-btn{width:38px;height:28px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a;border-radius:9px;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
+.prog-row{background:var(--card);padding:12px 14px;border-radius:16px;border:1px solid var(--brd);height:112px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.prog-left{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;height:100%}
+.prog-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.arr-col{display:flex;flex-direction:column;gap:6px}
+.arr-btn{width:44px;height:40px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a;border-radius:11px;font-size:.9rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
 .arr-btn:active{background:#dcfce7;color:#15803d;border-color:#10b981}
+.btn-x{width:36px;height:36px;border:none;background:#fee2e2;color:#b91c1c;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mode-pill{display:flex;flex-direction:column;background:#f1f5f9;border-radius:11px;padding:3px;gap:4px}
+.mode-pill button{border:none;background:transparent;font-size:12px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;color:#64748b;white-space:nowrap}
+.mode-pill button.act{background:#ffffff;color:#0f172a;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .rc{border:2px solid var(--acc)}.rc.wait{border-color:var(--brd);opacity:.7}
 .sb{background:var(--bg);padding:12px 6px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:96px;min-width:0;overflow:hidden;gap:6px}
 .sb.hi{background:var(--soft)}.rc.wait .sb.hi{background:var(--bg)}
@@ -42,9 +50,6 @@ input[type="time"]::-webkit-calendar-picker-indicator{display:none;-webkit-appea
 .adm{text-align:center;margin-top:6px}
 .adm-btn{background:none;border:none;color:var(--mut);font-size:.8rem;cursor:pointer;opacity:.7;padding:6px 12px;font-weight:700}
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.cg input{height:46px;font-size:1.1rem;padding:8px}
-.mode-pill{display:flex;background:#f1f5f9;border-radius:8px;padding:2px;gap:2px}
-.mode-pill button{border:none;background:transparent;font-size:11px;font-weight:800;padding:3px 7px;border-radius:6px;cursor:pointer;color:#64748b}
-.mode-pill button.act{background:#ffffff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 </style>
 </head>
 <body>
@@ -94,20 +99,17 @@ input[type="time"]::-webkit-calendar-picker-indicator{display:none;-webkit-appea
 </div>
 </div>
 </div>
-  
 <script type="module">
-const host = ['www', 'gstatic', 'com'].join('.');
-const folder = ['firebasejs', '10.12.2'].join('/');
-const FB_BASE = `https://${host}/${folder}/`;
+const gHost = ['www', 'gstatic', 'com'].join('.');
+const gFolder = ['firebasejs', '10.12.2'].join('/');
+const FB_BASE = `https://${gHost}/${gFolder}/`;
 
 const { initializeApp } = await import(FB_BASE + 'firebase-app.js');
 const { getDatabase, ref, set, update, onValue, onDisconnect, remove } = await import(FB_BASE + 'firebase-database.js');
 
+const DB_HOST = ['ricarica-condivisa-default-rtdb', 'europe-west1', 'firebasedatabase', 'app'].join('.');
+const firebaseConfig = { databaseURL: 'https://' + DB_HOST };
 
-const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
-const firebaseConfig = {
-  databaseURL: 'https://' + DB_HOST
-};
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const sharedRef = ref(db, "stato_condiviso");
@@ -117,8 +119,9 @@ const connRef = ref(db, ".info/connected");
 const presenceListRef = ref(db, "utenti_online");
 const clientId = "u_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now();
 const myPresenceRef = ref(db, "utenti_online/" + clientId);
+
 const STORICO_URL = 'https://' + DB_HOST + '/storico_ricariche.json';
-const NUOVO_HOST = 'calcolo-ricarica-2.' + 'netlify.app';
+const NUOVO_HOST = ['calcolo-ricarica-2', 'netlify', 'app'].join('.');
 const FN_URL = 'https://' + NUOVO_HOST + '/.netlify/functions/check-meross';
 
 const PIN = '1234', STORE_KEY = 'ev_ricarica_setup';
@@ -216,48 +219,48 @@ document.getElementById('hardwareMount').innerHTML = `
         ⏳ Verifica presa...
       </button>
 
-      <div id="box-programmazione" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; transition:opacity 0.2s;">
-        <div style="background:var(--card); padding:10px; border-radius:16px; border:1px solid var(--brd); display:flex; flex-direction:column; justify-content:space-between;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; min-height:22px;">
-            <span style="font-size:11px; font-weight:800; color:#15803d; text-transform:uppercase;">🟢 Accendi</span>
-            <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:6px; padding:2px 7px; font-size:11px; font-weight:800; cursor:pointer;">✕</button>
+      <div id="box-programmazione" style="display:flex; flex-direction:column; gap:10px; transition:opacity 0.2s;">
+        <div class="prog-row">
+          <div class="prog-left">
+            <span style="font-size:12px; font-weight:800; color:#15803d; text-transform:uppercase;">🟢 INIZIA</span>
+            <input type="time" id="ora-accensione" style="width:100%; height:44px; text-align:left; border:none; font-size:30px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
+            <div style="font-size:12px; font-weight:700; color:var(--mut);" id="subAcc">Avvio immediato</div>
           </div>
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
-            <input type="time" id="ora-accensione" style="flex:1; min-width:0; height:56px; text-align:center; border:none; font-size:26px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
-            <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+          <div class="prog-right">
+            <button type="button" id="btn-canc-accendi" class="btn-x" style="visibility:hidden;">✕</button>
+            <div class="arr-col">
               <button type="button" id="upAcc" class="arr-btn">▲</button>
               <button type="button" id="dnAcc" class="arr-btn">▼</button>
             </div>
           </div>
-          <div style="font-size:11px; font-weight:700; color:var(--mut); text-align:center; margin-top:4px; min-height:15px;" id="subAcc">Avvio immediato se vuoto</div>
         </div>
 
-        <div style="background:var(--card); padding:10px; border-radius:16px; border:1px solid var(--brd); display:flex; flex-direction:column; justify-content:space-between;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; min-height:22px;">
-            <span style="font-size:11px; font-weight:800; color:#b91c1c; text-transform:uppercase;">🔴 Spegni</span>
+        <div class="prog-row">
+          <div class="prog-left">
+            <span style="font-size:12px; font-weight:800; color:#b91c1c; text-transform:uppercase;">🔴 SPEGNI</span>
+            <input type="time" id="ora-spegnimento" style="width:100%; height:44px; text-align:left; border:none; font-size:30px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
+            <div id="wrapPercSpegni" style="display:none; align-items:center; height:44px; gap:4px;">
+              <input type="number" id="perc-spegnimento" min="1" max="100" placeholder="--" inputmode="numeric" style="width:74px; height:44px; text-align:left; border:none; font-size:30px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
+              <span style="font-size:20px; font-weight:800; color:var(--mut);">%</span>
+            </div>
+            <div style="font-size:12px; font-weight:800; color:#b91c1c;" id="subSpeg">Nessuno spegnimento</div>
+          </div>
+          <div class="prog-right">
+            <button type="button" id="btn-canc-spegni" class="btn-x" style="visibility:hidden;">✕</button>
             <div class="mode-pill" id="pillSpegniMode">
               <button type="button" id="btnModeTime" class="act">🕒 Ora</button>
               <button type="button" id="btnModePerc">🔋 %</button>
             </div>
-            <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:6px; padding:2px 7px; font-size:11px; font-weight:800; cursor:pointer;">✕</button>
-          </div>
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
-            <input type="time" id="ora-spegnimento" style="flex:1; min-width:0; height:56px; text-align:center; border:none; font-size:26px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
-            <div id="wrapPercSpegni" style="display:none; flex:1; min-width:0; position:relative; align-items:center;">
-              <input type="number" id="perc-spegnimento" min="1" max="100" value="80" inputmode="numeric" style="width:100%; height:56px; text-align:center; border:none; font-size:26px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0 18px 0 0;">
-              <span style="position:absolute; right:4px; font-size:16px; font-weight:800; color:var(--mut);">%</span>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+            <div class="arr-col">
               <button type="button" id="upSpeg" class="arr-btn">▲</button>
               <button type="button" id="dnSpeg" class="arr-btn">▼</button>
             </div>
           </div>
-          <div style="font-size:11px; font-weight:800; color:#b91c1c; text-align:center; margin-top:4px; min-height:15px;" id="subSpeg">Imposta fine carica</div>
         </div>
       </div>
 
       <button type="button" id="btn-attiva-prog" style="width:100%; padding:14px; border:none; border-radius:14px; font-weight:800; font-size:15px; cursor:pointer; background:#2563eb; color:#ffffff;">
-        📅 Attiva Programmazione Oraria
+        📅 Attiva Programmazione
       </button>
     </div>
   </div>
@@ -282,6 +285,21 @@ function pushSharedState() {
   try { set(sharedRef, payload); } catch (e) {}
 }
 
+function aggiornaVisibilitaX() {
+  const btnXAcc = document.getElementById('btn-canc-accendi');
+  const btnXSpeg = document.getElementById('btn-canc-spegni');
+  if (programmazioneAttiva) {
+    btnXAcc.style.visibility = 'hidden';
+    btnXSpeg.style.visibility = 'hidden';
+    return;
+  }
+  btnXAcc.style.visibility = document.getElementById('ora-accensione').value ? 'visible' : 'hidden';
+  const hasSpegVal = (spegniMode === 'time')
+    ? Boolean(document.getElementById('ora-spegnimento').value)
+    : Boolean(document.getElementById('perc-spegnimento').value);
+  btnXSpeg.style.visibility = hasSpegVal ? 'visible' : 'hidden';
+}
+
 function setSpegniMode(mode, sync = true) {
   spegniMode = mode;
   document.getElementById('btnModeTime').classList.toggle('act', mode === 'time');
@@ -289,10 +307,13 @@ function setSpegniMode(mode, sync = true) {
   document.getElementById('ora-spegnimento').style.display = mode === 'time' ? 'block' : 'none';
   document.getElementById('wrapPercSpegni').style.display = mode === 'perc' ? 'flex' : 'none';
   if (mode === 'perc') {
-    const curP = Math.max(0, +document.getElementById('inPerc').value || 0);
     const inpP = document.getElementById('perc-spegnimento');
-    if (+inpP.value <= curP) inpP.value = Math.min(100, Math.max(80, curP + 10));
+    const curP = Math.max(0, +document.getElementById('curPercLive').value || +document.getElementById('inPerc').value || 0);
+    if (inpP.value !== '' && +inpP.value <= curP) {
+      inpP.value = Math.min(100, curP + 1);
+    }
   }
+  aggiornaVisibilitaX();
   aggiornaCalcoli();
   if (sync) pushSharedState();
 }
@@ -351,7 +372,7 @@ function stepAccensione(deltaMin) {
   const nuovoTot = ((baseMin + deltaMin) % 1440 + 1440) % 1440;
   inp.value = `${String(Math.floor(nuovoTot / 60)).padStart(2, '0')}:${String(nuovoTot % 60).padStart(2, '0')}`;
   applicaVincoliOrari();
-  document.getElementById('btn-canc-accendi').style.display = 'inline-block';
+  aggiornaVisibilitaX();
   aggiornaCalcoli();
   pushSharedState();
 }
@@ -366,15 +387,16 @@ function stepSpegnimento(delta) {
     const nuovoTot = ((baseMin + delta) % 1440 + 1440) % 1440;
     inp.value = `${String(Math.floor(nuovoTot / 60)).padStart(2, '0')}:${String(nuovoTot % 60).padStart(2, '0')}`;
     applicaVincoliOrari();
-    document.getElementById('btn-canc-spegni').style.display = 'inline-block';
   } else {
     const inpP = document.getElementById('perc-spegnimento');
-    const minP = Math.min(100, Math.max(1, (+document.getElementById('inPerc').value || 0) + 1));
-    let val = (+inpP.value || minP) + delta;
+    const curP = Math.max(0, +document.getElementById('curPercLive').value || +document.getElementById('inPerc').value || 0);
+    const minP = Math.min(100, curP + 1);
+    let val = (inpP.value === '' ? Math.max(80, minP) : +inpP.value) + delta;
     if (val < minP) val = minP;
     if (val > 100) val = 100;
     inpP.value = val;
   }
+  aggiornaVisibilitaX();
   aggiornaCalcoli();
   pushSharedState();
 }
@@ -386,12 +408,13 @@ bindHold('dnSpeg', () => stepSpegnimento(-1));
 
 function aggiornaBloccoCampiProgrammazione(attiva) {
   programmazioneAttiva = attiva;
-  document.getElementById('box-programmazione').style.opacity = attiva ? '0.65' : '1';
+  document.getElementById('box-programmazione').style.opacity = attiva ? '0.75' : '1';
   document.getElementById('ora-accensione').disabled = attiva;
   document.getElementById('ora-spegnimento').disabled = attiva;
   document.getElementById('perc-spegnimento').disabled = attiva;
-  document.getElementById('pillSpegniMode').style.display = attiva ? 'none' : 'flex';
+  document.getElementById('pillSpegniMode').style.visibility = attiva ? 'hidden' : 'visible';
   ['upAcc', 'dnAcc', 'upSpeg', 'dnSpeg'].forEach(id => { document.getElementById(id).disabled = attiva; });
+  aggiornaVisibilitaX();
 
   const btnProg = document.getElementById('btn-attiva-prog');
   if (attiva) {
@@ -400,7 +423,7 @@ function aggiornaBloccoCampiProgrammazione(attiva) {
     btnProg.style.color = '#b91c1c';
     btnProg.style.border = '1px solid #fca5a5';
   } else {
-    btnProg.innerHTML = '📅 Attiva Programmazione Oraria';
+    btnProg.innerHTML = '📅 Attiva Programmazione';
     btnProg.style.background = '#2563eb';
     btnProg.style.color = '#ffffff';
     btnProg.style.border = 'none';
@@ -435,6 +458,7 @@ function aggiornaCalcoli() {
     document.getElementById('rt').textContent = '--';
     document.getElementById('rvKm').textContent = '--';
     document.getElementById('rvPerc').textContent = '--';
+    subSpeg.textContent = 'Inserisci autonomia di partenza';
     endTargetTs = null;
     return;
   }
@@ -469,17 +493,32 @@ function aggiornaCalcoli() {
     const finKm = Math.min(maxKm, Math.round(ka + totHours * percPerOra * kpReale));
     document.getElementById('rvKm').textContent = `${finKm} km`;
     document.getElementById('rvPerc').textContent = `${finPerc}%`;
-    subSpeg.textContent = `Stop programmato: ${formattaOraDaTs(endTargetTs)}`;
+    const oraStopStr = formattaOraDaTs(endTargetTs);
+    subSpeg.textContent = (spegniMode === 'perc')
+      ? `Stop programmato: ${oraStopStr}`
+      : `Stop programmato: ${oraStopStr} (${finPerc}%)`;
     if (!staCaricando) {
       document.getElementById('lblTempoFin').textContent = 'DURATA STIMATA';
       document.getElementById('rt').textContent = fmtDurata(totHours);
     }
   } else if (spegniMode === 'perc') {
+    if (inpSpegPerc.value === '') {
+      endTargetTs = null;
+      document.getElementById('lblTempoFin').textContent = 'TEMPO RIMANENTE';
+      document.getElementById('rt').textContent = '--';
+      document.getElementById('rvKm').textContent = `${curKm} km`;
+      document.getElementById('rvPerc').textContent = `${curPerc}%`;
+      subSpeg.textContent = 'Imposta % di spegnimento';
+      return;
+    }
+    if (!programmazioneAttiva && document.activeElement !== inpSpegPerc && +inpSpegPerc.value <= curPerc) {
+      inpSpegPerc.value = Math.min(100, curPerc + 1);
+    }
     const targetP = Math.min(100, Math.max(curPerc, +inpSpegPerc.value || 80));
     const deltaP = Math.max(0, targetP - pa);
     const totHours = deltaP / percPerOra;
     endTargetTs = baseStartTs + Math.round(totHours * 3600000);
-    const finKm = Math.min(maxKm, Math.round(ka + deltaP * kpReale));
+    const finKm = (targetP === curPerc) ? curKm : Math.min(maxKm, Math.round(ka + deltaP * kpReale));
     document.getElementById('rvKm').textContent = `${finKm} km`;
     document.getElementById('rvPerc').textContent = `${targetP}%`;
     subSpeg.textContent = `Fine stimata: ${formattaOraDaTs(endTargetTs)}`;
@@ -494,7 +533,7 @@ function aggiornaCalcoli() {
     const finKm = Math.min(maxKm, Math.round(ka + totHours * percPerOra * kpReale));
     document.getElementById('rvKm').textContent = `${finKm} km`;
     document.getElementById('rvPerc').textContent = `${finPerc}%`;
-    subSpeg.textContent = `Stop alle ${inpSpeg.value}`;
+    subSpeg.textContent = `Batteria stimata: ${finPerc}%`;
     if (!staCaricando) {
       document.getElementById('lblTempoFin').textContent = 'DURATA STIMATA';
       document.getElementById('rt').textContent = fmtDurata(totHours);
@@ -505,7 +544,7 @@ function aggiornaCalcoli() {
     document.getElementById('rt').textContent = '--';
     document.getElementById('rvKm').textContent = `${curKm} km`;
     document.getElementById('rvPerc').textContent = `${curPerc}%`;
-    subSpeg.textContent = 'Imposta fine carica';
+    subSpeg.textContent = 'Nessuno spegnimento';
   }
 }
 
@@ -557,24 +596,31 @@ function renderLiveHardware(d) {
   const hasAcc = Boolean(liveState.accensioneProgrammataTs && liveState.accensioneProgrammataTs > Date.now());
   const hasSpeg = Boolean(liveState.spegnimentoProgrammatoTs && liveState.spegnimentoProgrammatoTs > Date.now());
   const oraAttiva = hasAcc || hasSpeg;
+
+  if (oraAttiva && liveState.spegnimentoModo) {
+    setSpegniMode(liveState.spegnimentoModo, false);
+  }
   aggiornaBloccoCampiProgrammazione(oraAttiva);
 
   const inpAcc = document.getElementById('ora-accensione');
   const inpSpeg = document.getElementById('ora-spegnimento');
+  const inpSpegPerc = document.getElementById('perc-spegnimento');
+
   if (eraAttiva && !oraAttiva) {
     inpAcc.value = '';
     inpSpeg.value = '';
-    document.getElementById('btn-canc-accendi').style.display = 'none';
-    document.getElementById('btn-canc-spegni').style.display = 'none';
+    inpSpegPerc.value = '';
+    aggiornaVisibilitaX();
     pushSharedState();
   } else if (oraAttiva) {
     if (hasAcc) inpAcc.value = formattaOraDaTs(liveState.accensioneProgrammataTs);
     if (hasSpeg) {
-      setSpegniMode('time', false);
-      inpSpeg.value = formattaOraDaTs(liveState.spegnimentoProgrammatoTs);
+      if (liveState.spegnimentoModo === 'perc' && liveState.spegnimentoTargetPerc) {
+        inpSpegPerc.value = liveState.spegnimentoTargetPerc;
+      } else {
+        inpSpeg.value = formattaOraDaTs(liveState.spegnimentoProgrammatoTs);
+      }
     }
-    document.getElementById('btn-canc-accendi').style.display = 'none';
-    document.getElementById('btn-canc-spegni').style.display = 'none';
   }
 
   const btnReset = document.getElementById('btnResetSession');
@@ -601,16 +647,15 @@ onValue(sharedRef, (snap) => {
     if (!programmazioneAttiva) {
       if (data.bozzaAcc !== undefined && document.activeElement !== document.getElementById('ora-accensione')) {
         document.getElementById('ora-accensione').value = data.bozzaAcc;
-        document.getElementById('btn-canc-accendi').style.display = data.bozzaAcc ? 'inline-block' : 'none';
       }
       if (data.bozzaSpegMode) setSpegniMode(data.bozzaSpegMode, false);
       if (data.bozzaSpegOra !== undefined && document.activeElement !== document.getElementById('ora-spegnimento')) {
         document.getElementById('ora-spegnimento').value = data.bozzaSpegOra;
-        document.getElementById('btn-canc-spegni').style.display = (data.bozzaSpegOra && spegniMode === 'time') ? 'inline-block' : 'none';
       }
       if (data.bozzaSpegPerc !== undefined && document.activeElement !== document.getElementById('perc-spegnimento')) {
         document.getElementById('perc-spegnimento').value = data.bozzaSpegPerc;
       }
+      aggiornaVisibilitaX();
     }
     aggiornaCalcoli();
   } finally {
@@ -637,30 +682,23 @@ onValue(liveRef, (snap) => {
   document.getElementById(id).addEventListener('input', () => { saveSetup(true); aggiornaCalcoli(); });
 });
 
-document.getElementById('ora-accensione').addEventListener('change', (e) => {
+document.getElementById('ora-accensione').addEventListener('change', () => {
   applicaVincoliOrari();
-  document.getElementById('btn-canc-accendi').style.display = e.target.value ? 'inline-block' : 'none';
+  aggiornaVisibilitaX();
   aggiornaCalcoli();
   pushSharedState();
 });
 
 document.getElementById('btn-canc-accendi').addEventListener('click', () => {
   document.getElementById('ora-accensione').value = '';
-  document.getElementById('btn-canc-accendi').style.display = 'none';
+  aggiornaVisibilitaX();
   aggiornaCalcoli();
   pushSharedState();
 });
 
-document.getElementById('ora-spegnimento').addEventListener('change', (e) => {
+document.getElementById('ora-spegnimento').addEventListener('change', () => {
   applicaVincoliOrari();
-  document.getElementById('btn-canc-spegni').style.display = e.target.value ? 'inline-block' : 'none';
-  aggiornaCalcoli();
-  pushSharedState();
-});
-
-document.getElementById('btn-canc-spegni').addEventListener('click', () => {
-  document.getElementById('ora-spegnimento').value = '';
-  document.getElementById('btn-canc-spegni').style.display = 'none';
+  aggiornaVisibilitaX();
   aggiornaCalcoli();
   pushSharedState();
 });
@@ -668,6 +706,15 @@ document.getElementById('btn-canc-spegni').addEventListener('click', () => {
 document.getElementById('perc-spegnimento').addEventListener('input', (e) => {
   e.target.value = e.target.value.replace(/[^0-9]/g, '');
   if (+e.target.value > 100) e.target.value = 100;
+  aggiornaVisibilitaX();
+  aggiornaCalcoli();
+  pushSharedState();
+});
+
+document.getElementById('btn-canc-spegni').addEventListener('click', () => {
+  if (spegniMode === 'time') document.getElementById('ora-spegnimento').value = '';
+  else document.getElementById('perc-spegnimento').value = '';
+  aggiornaVisibilitaX();
   aggiornaCalcoli();
   pushSharedState();
 });
@@ -689,19 +736,25 @@ document.getElementById('btn-attiva-prog').addEventListener('click', async () =>
   const btnProg = document.getElementById('btn-attiva-prog');
   if (programmazioneAttiva) {
     btnProg.textContent = '⏳ Disattivazione...';
-    await update(liveRef, { accensioneProgrammataTs: null, spegnimentoProgrammatoTs: null });
+    await update(liveRef, {
+      accensioneProgrammataTs: null,
+      spegnimentoProgrammatoTs: null,
+      spegnimentoModo: null,
+      spegnimentoTargetPerc: null
+    });
   } else {
     const valAcc = document.getElementById('ora-accensione').value;
     const valSpegOra = document.getElementById('ora-spegnimento').value;
-    const hasSpeg = (spegniMode === 'perc') || Boolean(valSpegOra);
+    const valSpegPerc = document.getElementById('perc-spegnimento').value;
+    const hasSpeg = (spegniMode === 'perc') ? Boolean(valSpegPerc) : Boolean(valSpegOra);
     if (!valAcc && !hasSpeg) {
-      alert('Imposta almeno un orario di accensione o uno spegnimento prima di attivare.');
+      alert('Imposta almeno un orario di avvio o uno spegnimento prima di attivare.');
       return;
     }
     btnProg.textContent = '⏳ Attivazione...';
     const accTs = valAcc ? calcolaProssimoTimestamp(valAcc, Date.now()) : null;
     let spegTs = null;
-    if (spegniMode === 'perc') {
+    if (spegniMode === 'perc' && valSpegPerc) {
       aggiornaCalcoli();
       spegTs = endTargetTs;
     } else if (valSpegOra) {
@@ -710,7 +763,9 @@ document.getElementById('btn-attiva-prog').addEventListener('click', async () =>
 
     await update(liveRef, {
       accensioneProgrammataTs: accTs,
-      spegnimentoProgrammatoTs: spegTs
+      spegnimentoProgrammatoTs: spegTs,
+      spegnimentoModo: hasSpeg ? spegniMode : null,
+      spegnimentoTargetPerc: (spegniMode === 'perc' && valSpegPerc) ? +valSpegPerc : null
     });
 
     if (accTs && presaAttualmenteAccesa && liveState.stato !== 'in_corso') {
@@ -785,6 +840,7 @@ document.getElementById('stato-presa-badge').addEventListener('click', () => {
 });
 
 loadSetup();
+aggiornaVisibilitaX();
 aggiornaDaPresa();
 setInterval(aggiornaDaPresa, 60000);
 </script>
