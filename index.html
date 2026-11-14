@@ -81,7 +81,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{display:none;-webkit-appea
 <div class="ct"><span>AUTONOMIA A FINE CARICA</span></div>
 <div class="row3">
 <div class="sb hi"><span class="sl" id="lblTempoFin">TEMPO RIMANENTE</span><span class="sv" id="rt">--</span></div>
-<div class="sb"><span class="sl">AUTONOMIA KM</span><span class="sv" id="rvKm">--</span></div>
+<div class="sb"><span class="sl">AUTONOMIA km</span><span class="sv" id="rvKm">--</span></div>
 <div class="sb"><span class="sl">AUTONOMIA %</span><span class="sv" id="rvPerc">--</span></div>
 </div>
 <button type="button" class="action-btn" id="btnResetSession" style="display:none;">🔄 Resetta Ricarica e kWh</button>
@@ -546,7 +546,7 @@ function aggiornaCalcoli() {
     const finKm = (targetP === curPerc) ? curKm : Math.min(maxKm, Math.round(refKm + deltaP * kpReale));
     document.getElementById('rvKm').textContent = `${finKm} km`;
     document.getElementById('rvPerc').textContent = `${targetP}%`;
-    subSpeg.textContent = `Fine stimata: ${formattaOraDaTs(endTargetTs)}`;
+    subSpeg.textContent = `Fine: ${formattaOraDaTs(endTargetTs)}`;
     if (!staCaricando || hasFutureStart) {
       document.getElementById('lblTempoFin').textContent = 'DURATA STIMATA';
       document.getElementById('rt').textContent = fmtDurata(totHours);
@@ -558,7 +558,7 @@ function aggiornaCalcoli() {
     const finKm = Math.min(maxKm, Math.round(refKm + totHours * percPerOra * kpReale));
     document.getElementById('rvKm').textContent = `${finKm} km`;
     document.getElementById('rvPerc').textContent = `${finPerc}%`;
-    subSpeg.textContent = `Batteria stimata: ${finPerc}%`;
+    subSpeg.textContent = `Carica: ${finPerc}%`;
     if (!staCaricando || hasFutureStart) {
       document.getElementById('lblTempoFin').textContent = 'DURATA STIMATA';
       document.getElementById('rt').textContent = fmtDurata(totHours);
@@ -617,7 +617,7 @@ function renderLiveHardware(d) {
   }
 
   const btnToggle = document.getElementById('btn-toggle-presa');
-  btnToggle.innerHTML = presaAttualmenteAccesa ? '🔌 Spegni Presa Ora' : '⚡ Accendi Presa Ora';
+  btnToggle.innerHTML = presaAttualmenteAccesa ? '🔌 Spegni presa' : '⚡ Accendi Presa';
   btnToggle.style.background = presaAttualmenteAccesa ? '#fee2e2' : '#dcfce7';
   btnToggle.style.color = presaAttualmenteAccesa ? '#b91c1c' : '#15803d';
 
