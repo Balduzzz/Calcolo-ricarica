@@ -104,8 +104,9 @@ const { initializeApp } = await import(FB_BASE + 'firebase-app.js');
 const { getDatabase, ref, set, update, onValue, onDisconnect, remove } = await import(FB_BASE + 'firebase-database.js');
 
 
+const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
 const firebaseConfig = {
-  databaseURL: "https://firebasedatabase.app"
+  databaseURL: 'https://' + DB_HOST
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
@@ -116,8 +117,6 @@ const connRef = ref(db, ".info/connected");
 const presenceListRef = ref(db, "utenti_online");
 const clientId = "u_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now();
 const myPresenceRef = ref(db, "utenti_online/" + clientId);
-
-const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
 const STORICO_URL = 'https://' + DB_HOST + '/storico_ricariche.json';
 const NUOVO_HOST = 'calcolo-ricarica-2.' + 'netlify.app';
 const FN_URL = 'https://' + NUOVO_HOST + '/.netlify/functions/check-meross';
