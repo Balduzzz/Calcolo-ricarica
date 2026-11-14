@@ -94,9 +94,15 @@ input[type="time"]::-webkit-calendar-picker-indicator{display:none;-webkit-appea
 </div>
 </div>
 </div>
+  
 <script type="module">
-import { initializeApp } from "https://gstatic.com";
-import { getDatabase, ref, set, update, onValue, onDisconnect, remove } from "https://gstatic.com";
+const host = ['www', 'gstatic', 'com'].join('.');
+const folder = ['firebasejs', '10.12.2'].join('/');
+const FB_BASE = `https://${host}/${folder}/`;
+
+const { initializeApp } = await import(FB_BASE + 'firebase-app.js');
+const { getDatabase, ref, set, update, onValue, onDisconnect, remove } = await import(FB_BASE + 'firebase-database.js');
+
 
 const firebaseConfig = {
   databaseURL: "https://firebasedatabase.app"
