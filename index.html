@@ -714,11 +714,11 @@ function calc(enforceMin=false, sync=false){
     document.getElementById('rt').textContent = fmt(currentDurationH);
     document.getElementById('rf').textContent = inpSpeg.value;
     s2.classList.add('dis');
-    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (FISSO)';
+    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (ORARIO FISSO)';
     if (btnCancSpeg) btnCancSpeg.style.display = 'inline-block';
   } else {
     s2.classList.remove('dis');
-    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (AUTO)';
+    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
     if (btnCancSpeg) btnCancSpeg.style.display = 'none';
 
     if(m==='p'){
@@ -747,14 +747,6 @@ function calc(enforceMin=false, sync=false){
 
     if (inpSpeg && document.activeElement !== inpSpeg) {
       inpSpeg.value = currentDurationH > 0 ? endStr : '';
-    }
-
-    if (window.DB_URL_LIVE && currentDurationH > 0.01) {
-      fetch(window.DB_URL_LIVE, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ spegnimentoProgrammatoTs: endTs, spegnimentoManuale: false })
-      }).catch(() => {});
     }
   }
 
@@ -964,7 +956,6 @@ if(!loadSession()){
 (function initSistemaHardware() {
   const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
   const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
-  window.DB_URL_LIVE = DB_URL;
   const NUOVO_HOST = 'calcolo-ricarica-2.' + 'netlify.app';
   const FN_URL = 'https://' + NUOVO_HOST + '/.netlify/functions/check-meross';
   const btnSessione = document.querySelector('button[onclick*="toggleSession"]');
@@ -991,29 +982,35 @@ if(!loadSession()){
       ⏳ Verifica presa...
     </button>
 
-    <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:13px; font-weight:800; color:#15803d; text-transform:uppercase; letter-spacing:0.3px;">🟢 Accendi alle</span>
-        <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Annulla ✕</button>
+    <div id="box-programmazione" style="display:flex; flex-direction:column; gap:10px; transition:opacity 0.2s;">
+      <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; font-weight:800; color:#15803d; text-transform:uppercase; letter-spacing:0.3px;">🟢 Accendi alle</span>
+          <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Svuota ✕</button>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-accensione', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
+          <input type="time" id="ora-accensione" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
+          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-accensione', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
+        </div>
       </div>
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <button type="button" onclick="spostaOrario('ora-accensione', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
-        <input type="time" id="ora-accensione" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
-        <button type="button" onclick="spostaOrario('ora-accensione', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
+
+      <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span id="lbl-spegni" style="font-size:13px; font-weight:800; color:#b91c1c; text-transform:uppercase; letter-spacing:0.3px;">🔴 Spegni (Obiettivo raggiunto)</span>
+          <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Torna all'obiettivo ✕</button>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-spegnimento', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
+          <input type="time" id="ora-spegnimento" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
+          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-spegnimento', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
+        </div>
       </div>
     </div>
 
-    <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span id="lbl-spegni" style="font-size:13px; font-weight:800; color:#b91c1c; text-transform:uppercase; letter-spacing:0.3px;">🔴 Spegni (Auto)</span>
-        <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Torna Auto ✕</button>
-      </div>
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <button type="button" onclick="spostaOrario('ora-spegnimento', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
-        <input type="time" id="ora-spegnimento" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
-        <button type="button" onclick="spostaOrario('ora-spegnimento', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
-      </div>
-    </div>
+    <button type="button" id="btn-attiva-prog" style="width:100%; padding:14px 16px; border:none; border-radius:16px; font-weight:800; font-size:15px; cursor:pointer; background:#2563eb; color:#ffffff; transition:all 0.2s;">
+      📅 Attiva Programmazione Oraria
+    </button>
   `;
 
   controlWrapper.appendChild(badge);
@@ -1023,7 +1020,39 @@ if(!loadSession()){
   if (firstCard && firstCard.parentNode) firstCard.parentNode.insertBefore(controlWrapper, firstCard);
   else document.body.prepend(controlWrapper);
 
+  let presaAttualmenteAccesa = false;
+  let programmazioneAttiva = false;
+
+  function aggiornaBloccoCampiProgrammazione(attiva) {
+    programmazioneAttiva = attiva;
+    const box = document.getElementById('box-programmazione');
+    const btnProg = document.getElementById('btn-attiva-prog');
+    const inpAcc = document.getElementById('ora-accensione');
+    const inpSpeg = document.getElementById('ora-spegnimento');
+    const stepBtns = document.querySelectorAll('.btn-step-orario');
+
+    if (inpAcc) inpAcc.disabled = attiva;
+    if (inpSpeg) inpSpeg.disabled = attiva;
+    stepBtns.forEach(b => b.disabled = attiva);
+    if (box) box.style.opacity = attiva ? '0.65' : '1';
+
+    if (btnProg) {
+      if (attiva) {
+        btnProg.innerHTML = '🛑 Disattiva Programmazione (Modifica orari)';
+        btnProg.style.background = '#fef2f2';
+        btnProg.style.color = '#b91c1c';
+        btnProg.style.border = '1px solid #fca5a5';
+      } else {
+        btnProg.innerHTML = '📅 Attiva Programmazione Oraria';
+        btnProg.style.background = '#2563eb';
+        btnProg.style.color = '#ffffff';
+        btnProg.style.border = 'none';
+      }
+    }
+  }
+
   window.spostaOrario = function(idInput, deltaMin) {
+    if (programmazioneAttiva) return;
     const inp = document.getElementById(idInput);
     if (!inp) return;
     let baseMin;
@@ -1041,13 +1070,11 @@ if(!loadSession()){
     inp.dispatchEvent(new Event('change'));
   };
 
-  let presaAttualmenteAccesa = false;
-
-  function calcolaProssimoTimestamp(timeStr) {
+  function calcolaProssimoTimestamp(timeStr, baseTs = Date.now()) {
     const [hh, mm] = timeStr.split(':').map(Number);
-    const adesso = new Date();
-    const target = new Date(adesso.getFullYear(), adesso.getMonth(), adesso.getDate(), hh, mm, 0, 0);
-    if (target.getTime() <= adesso.getTime()) target.setDate(target.getDate() + 1);
+    const baseDate = new Date(baseTs);
+    const target = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hh, mm, 0, 0);
+    if (target.getTime() <= baseTs) target.setDate(target.getDate() + 1);
     return target.getTime();
   }
 
@@ -1080,27 +1107,30 @@ if(!loadSession()){
       btnToggle.style.color = presaAttualmenteAccesa ? '#b91c1c' : '#15803d';
     }
 
+    const hasAcc = Boolean(d.accensioneProgrammataTs && d.accensioneProgrammataTs > Date.now());
+    const hasSpeg = Boolean(d.spegnimentoProgrammatoTs && d.spegnimentoProgrammatoTs > Date.now());
+    aggiornaBloccoCampiProgrammazione(hasAcc || hasSpeg);
+
     const inputAccendi = document.getElementById('ora-accensione');
     const btnCancAccendi = document.getElementById('btn-canc-accendi');
     if (inputAccendi && btnCancAccendi) {
-      if (d.accensioneProgrammataTs && d.accensioneProgrammataTs > Date.now()) {
-        if (document.activeElement !== inputAccendi) inputAccendi.value = formattaOraDaTs(d.accensioneProgrammataTs);
-        btnCancAccendi.style.display = 'inline-block';
-      } else {
-        if (document.activeElement !== inputAccendi) inputAccendi.value = '';
+      if (hasAcc) {
+        inputAccendi.value = formattaOraDaTs(d.accensioneProgrammataTs);
         btnCancAccendi.style.display = 'none';
+      } else if (!programmazioneAttiva) {
+        btnCancAccendi.style.display = inputAccendi.value ? 'inline-block' : 'none';
       }
     }
 
     spegnimentoManuale = Boolean(d.spegnimentoManuale);
     const inputSpegni = document.getElementById('ora-spegnimento');
     const btnCancSpegni = document.getElementById('btn-canc-spegni');
-    if (inputSpegni && btnCancSpegni && spegnimentoManuale) {
-      if (d.spegnimentoProgrammatoTs && d.spegnimentoProgrammatoTs > Date.now()) {
-        if (document.activeElement !== inputSpegni) inputSpegni.value = formattaOraDaTs(d.spegnimentoProgrammatoTs);
+    if (inputSpegni && btnCancSpegni) {
+      if (hasSpeg && spegnimentoManuale) {
+        inputSpegni.value = formattaOraDaTs(d.spegnimentoProgrammatoTs);
+        btnCancSpegni.style.display = 'none';
+      } else if (!programmazioneAttiva && spegnimentoManuale) {
         btnCancSpegni.style.display = 'inline-block';
-      } else {
-        spegnimentoManuale = false;
       }
     }
 
@@ -1137,6 +1167,10 @@ if(!loadSession()){
     }
 
     if (typeof calc === 'function') calc(false, false);
+    const lblSpeg = document.getElementById('lbl-spegni');
+    if (lblSpeg) {
+      lblSpeg.textContent = spegnimentoManuale ? '🔴 SPEGNI (ORARIO FISSO)' : '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
+    }
     if (typeof tick === 'function') tick();
     aggiornaVisibilitaReset(d);
   }
@@ -1155,39 +1189,81 @@ if(!loadSession()){
     } catch (e) { badge.innerHTML = '⚠️ Errore invio comando alla presa'; }
   });
 
-   document.getElementById('ora-accensione').addEventListener('change', async (e) => {
-    if (!e.target.value) return;
-    const ts = calcolaProssimoTimestamp(e.target.value);
-    document.getElementById('btn-canc-accendi').style.display = 'inline-block';
+  document.getElementById('ora-accensione').addEventListener('change', (e) => {
+    document.getElementById('btn-canc-accendi').style.display = e.target.value ? 'inline-block' : 'none';
     if (typeof calc === 'function') calc(false, false);
-    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accensioneProgrammataTs: ts }) }).catch(() => {});
-    if (presaAttualmenteAccesa && (!window.presaReale || !window.presaReale.inCarica)) {
-      const res = await fetch(`${FN_URL}?toggle=0`).catch(() => null);
-      const data = res ? await res.json().catch(() => null) : null;
-      if (data && data.statoDb) aggiornaUI(data.statoDb);
-    }
   });
 
-  document.getElementById('btn-canc-accendi').addEventListener('click', async () => {
+  document.getElementById('btn-canc-accendi').addEventListener('click', () => {
     document.getElementById('ora-accensione').value = '';
     document.getElementById('btn-canc-accendi').style.display = 'none';
     if (typeof calc === 'function') calc(false, false);
-    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accensioneProgrammataTs: null }) }).catch(() => {});
   });
 
-  document.getElementById('ora-spegnimento').addEventListener('change', async (e) => {
-    if (!e.target.value) return;
-    spegnimentoManuale = true;
-    const ts = calcolaProssimoTimestamp(e.target.value);
-    document.getElementById('btn-canc-spegni').style.display = 'inline-block';
+  document.getElementById('ora-spegnimento').addEventListener('change', (e) => {
+    if (!e.target.value) {
+      spegnimentoManuale = false;
+      document.getElementById('btn-canc-spegni').style.display = 'none';
+    } else {
+      spegnimentoManuale = true;
+      document.getElementById('btn-canc-spegni').style.display = 'inline-block';
+    }
     if (typeof calc === 'function') calc(false, false);
-    await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spegnimentoProgrammatoTs: ts, spegnimentoManuale: true }) }).catch(() => {});
+    const lblSpeg = document.getElementById('lbl-spegni');
+    if (lblSpeg) lblSpeg.textContent = spegnimentoManuale ? '🔴 SPEGNI (ORARIO FISSO)' : '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
   });
 
-  document.getElementById('btn-canc-spegni').addEventListener('click', async () => {
+  document.getElementById('btn-canc-spegni').addEventListener('click', () => {
     spegnimentoManuale = false;
     document.getElementById('btn-canc-spegni').style.display = 'none';
     if (typeof calc === 'function') calc(false, false);
+    const lblSpeg = document.getElementById('lbl-spegni');
+    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
+  });
+
+  document.getElementById('btn-attiva-prog').addEventListener('click', async () => {
+    const btnProg = document.getElementById('btn-attiva-prog');
+    if (programmazioneAttiva) {
+      btnProg.textContent = '⏳ Disattivazione...';
+      await fetch(DB_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accensioneProgrammataTs: null, spegnimentoProgrammatoTs: null, spegnimentoManuale: false })
+      }).catch(() => {});
+      aggiornaBloccoCampiProgrammazione(false);
+      document.getElementById('btn-canc-accendi').style.display = document.getElementById('ora-accensione').value ? 'inline-block' : 'none';
+      if (spegnimentoManuale) document.getElementById('btn-canc-spegni').style.display = 'inline-block';
+    } else {
+      const valAcc = document.getElementById('ora-accensione').value;
+      const valSpeg = document.getElementById('ora-spegnimento').value;
+      if (!valAcc && !valSpeg) {
+        alert('Imposta almeno un orario di accensione o spegnimento prima di attivare.');
+        return;
+      }
+      btnProg.textContent = '⏳ Attivazione in corso...';
+      const accTs = valAcc ? calcolaProssimoTimestamp(valAcc, Date.now()) : null;
+      const spegTs = valSpeg ? calcolaProssimoTimestamp(valSpeg, accTs || Date.now()) : null;
+
+      await fetch(DB_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accensioneProgrammataTs: accTs,
+          spegnimentoProgrammatoTs: spegTs,
+          spegnimentoManuale: spegnimentoManuale
+        })
+      }).catch(() => {});
+
+      aggiornaBloccoCampiProgrammazione(true);
+      document.getElementById('btn-canc-accendi').style.display = 'none';
+      document.getElementById('btn-canc-spegni').style.display = 'none';
+
+      if (accTs && presaAttualmenteAccesa && (!window.presaReale || !window.presaReale.inCarica)) {
+        const res = await fetch(`${FN_URL}?toggle=0`).catch(() => null);
+        const data = res ? await res.json().catch(() => null) : null;
+        if (data && data.statoDb) aggiornaUI(data.statoDb);
+      }
+    }
   });
   async function salvaSoloParametri() {
     const payload = {
@@ -1227,7 +1303,7 @@ if(!loadSession()){
       const listaEl = document.getElementById('storico-lista');
       const totEl = document.getElementById('storico-tot');
       if (!data) { listaEl.innerHTML = 'Nessuna ricarica salvata nello storico.'; totEl.textContent = '0.00 kWh totali'; return; }
-      const voci = Object.entries(data).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const voci = Object.entries(data).sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
       const sommaKwh = voci.reduce((acc, [, v]) => acc + (Number(v.kwh) || 0), 0);
       totEl.textContent = `${sommaKwh.toFixed(2)} kWh totali`;
       listaEl.innerHTML = voci.map(([id, v]) => `
@@ -1288,4 +1364,3 @@ if(!loadSession()){
 </script>
 </body>
 </html>
-
