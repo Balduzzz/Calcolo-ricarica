@@ -222,9 +222,9 @@ document.getElementById('hardwareMount').innerHTML = `
       <div id="box-programmazione" style="display:flex; flex-direction:column; gap:10px; transition:opacity 0.2s;">
         <div class="prog-row">
           <div class="prog-left">
-            <span style="font-size:12px; font-weight:800; color:#15803d; text-transform:uppercase;">🟢 INIZIA</span>
+            <span style="font-size:16px; font-weight:800; color:#15803d; text-transform:uppercase;">🟢 INIZIA</span>
             <input type="time" id="ora-accensione" style="width:100%; height:44px; text-align:left; border:none; font-size:30px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
-            <div style="font-size:12px; font-weight:700; color:var(--mut);" id="subAcc">Avvio immediato</div>
+            <div style="font-size:14px; font-weight:700; color:var(--mut);" id="subAcc">Avvio immediato</div>
           </div>
           <div class="prog-right">
             <button type="button" id="btn-canc-accendi" class="btn-x" style="visibility:hidden;">✕</button>
@@ -237,19 +237,19 @@ document.getElementById('hardwareMount').innerHTML = `
 
         <div class="prog-row">
           <div class="prog-left">
-            <span style="font-size:12px; font-weight:800; color:#b91c1c; text-transform:uppercase;">🔴 SPEGNI</span>
+            <span style="font-size:16px; font-weight:800; color:#b91c1c; text-transform:uppercase;">🔴 SPEGNI</span>
             <input type="time" id="ora-spegnimento" style="width:100%; height:44px; text-align:left; border:none; font-size:30px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
             <div id="wrapPercSpegni" style="display:none; align-items:center; height:44px; gap:4px;">
               <input type="number" id="perc-spegnimento" min="1" max="100" placeholder="--" inputmode="numeric" style="width:56px; height:44px; text-align:left; border:none; font-size:30px; font-weight:800; color:var(--txt); background:transparent; outline:none; padding:0;">
               <span style="font-size:20px; font-weight:800; color:var(--mut);">%</span>
             </div>
-            <div style="font-size:12px; font-weight:800; color:#b91c1c;" id="subSpeg">Nessuno spegnimento</div>
+            <div style="font-size:14px; font-weight:800; color:#b91c1c;" id="subSpeg">Nessuno spegnimento</div>
           </div>
           <div class="prog-right">
             <button type="button" id="btn-canc-spegni" class="btn-x" style="visibility:hidden;">✕</button>
             <div class="mode-pill" id="pillSpegniMode">
-              <button type="button" id="btnModeTime" class="act">🕒 Ora</button>
-              <button type="button" id="btnModePerc">🔋 %</button>
+             <button type="button" id="btnModeTime" class="act" style="font-size:15px; padding:5px 10px;"><span style="font-size:18px;">🕒</span> Ora</button>
+             <button type="button" id="btnModePerc" style="font-size:15px; padding:5px 10px;"><span style="font-size:18px;">🔋</span> %</button>
             </div>
             <div class="arr-col">
               <button type="button" id="upSpeg" class="arr-btn">▲</button>
@@ -288,18 +288,36 @@ function pushSharedState() {
 function aggiornaVisibilitaX() {
   const btnXAcc = document.getElementById('btn-canc-accendi');
   const btnXSpeg = document.getElementById('btn-canc-spegni');
+  const inpAcc = document.getElementById('ora-accensione');
+  const inpSpeg = document.getElementById('ora-spegnimento');
+
+  // Mostra "--:--" automatico su iPhone/smartphone quando l'orario è vuoto
+  [inpAcc, inpSpeg].forEach((inp, idx) => {
+    if (!inp) return;
+    let ph = document.getElementById('ph-time-' + idx);
+    if (!ph) {
+      inp.parentElement.style.position = 'relative';
+      ph = document.createElement('span');
+      ph.id = 'ph-time-' + idx;
+      ph.textContent = '--:--';
+      ph.style.cssText = 'position:absolute; left:0; font-size:30px; font-weight:800; color:var(--mut); opacity:0.45; pointer-events:none;';
+      inp.parentElement.insertBefore(ph, inp);
+    }
+    const nascosto = (idx === 1 && spegniMode !== 'time') || Boolean(inp.value);
+    ph.style.display = nascosto ? 'none' : 'block';
+  });
+
   if (programmazioneAttiva) {
     btnXAcc.style.visibility = 'hidden';
     btnXSpeg.style.visibility = 'hidden';
     return;
   }
-  btnXAcc.style.visibility = document.getElementById('ora-accensione').value ? 'visible' : 'hidden';
+  btnXAcc.style.visibility = inpAcc.value ? 'visible' : 'hidden';
   const hasSpegVal = (spegniMode === 'time')
-    ? Boolean(document.getElementById('ora-spegnimento').value)
+    ? Boolean(inpSpeg.value)
     : Boolean(document.getElementById('perc-spegnimento').value);
   btnXSpeg.style.visibility = hasSpegVal ? 'visible' : 'hidden';
 }
-
 function setSpegniMode(mode, sync = true) {
   spegniMode = mode;
   document.getElementById('btnModeTime').classList.toggle('act', mode === 'time');
