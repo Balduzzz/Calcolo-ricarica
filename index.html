@@ -651,12 +651,13 @@ let spegnimentoManuale = false;
 
 function calc(enforceMin=false, sync=false){
   const rc=document.getElementById('rc'),s2=document.getElementById('step2'),btnAct=document.getElementById('btnAction');
+  if (s2) s2.style.display = 'none';
   let {v,kp,pk}=getParams();
 
   if(elKm.value===''||elPerc.value===''){
-    s2.classList.add('dis');rc.classList.add('wait');
+    rc.classList.add('wait');
     btnAct.disabled=true;
-    document.getElementById('rl').textContent=m==='p'?'Autonomia finale (km)':'Autonomia finale (%)';
+    document.getElementById('rl').textContent='Autonomia finale';
     document.getElementById('rv').textContent='--';
     document.getElementById('rt').textContent='--';
     document.getElementById('rf').textContent='--';
@@ -665,30 +666,16 @@ function calc(enforceMin=false, sync=false){
     return;
   }
 
-  s2.classList.remove('dis');
   rc.classList.remove('wait');
   btnAct.disabled=false;
 
   const ka=Math.max(0,+elKm.value||0),pa=Math.min(100,Math.max(0,+elPerc.value||0));
   const percPerOraReale = v / kp;
   let kpReale = (ka > 0 && pa > 0) ? (ka / pa) : kp;
-  const pkReale = kpReale > 0 ? (1 / kpReale) : pk;
   const maxKm = Math.round(100 * kpReale);
-
-  const elTP=document.getElementById('tP'),elTK=document.getElementById('tK');
-  elTP.min=pa; elTP.max=100;
-  elTK.min=ka; elTK.max=maxKm;
-
-  const editingCurrent=(document.activeElement===elKm||document.activeElement===elPerc);
-  if(editingCurrent||enforceMin){
-    if(elTP.value===''||+elTP.value<pa) elTP.value=pa;
-    if(elTK.value===''||+elTK.value<ka) elTK.value=ka;
-  }
 
   const inpAcc = document.getElementById('ora-accensione');
   const inpSpeg = document.getElementById('ora-spegnimento');
-  const lblSpeg = document.getElementById('lbl-spegni');
-  const btnCancSpeg = document.getElementById('btn-canc-spegni');
 
   const adesso = new Date();
   let startTs = adesso.getTime();
@@ -699,7 +686,7 @@ function calc(enforceMin=false, sync=false){
     startTs = dtAcc.getTime();
   }
 
-  if (spegnimentoManuale && inpSpeg && inpSpeg.value) {
+  if (inpSpeg && inpSpeg.value) {
     const [h2, m2] = inpSpeg.value.split(':').map(Number);
     const dtSpeg = new Date(adesso.getFullYear(), adesso.getMonth(), adesso.getDate(), h2, m2, 0, 0);
     if (dtSpeg.getTime() <= startTs) dtSpeg.setDate(dtSpeg.getDate() + 1);
@@ -709,51 +696,20 @@ function calc(enforceMin=false, sync=false){
     const finalPerc = Math.min(100, Math.round(pa + gainedPerc));
     const finalKm = Math.min(maxKm, Math.round(ka + (gainedPerc * kpReale)));
 
-    document.getElementById('rl').textContent = 'Autonomia attesa (Orario fisso)';
+    document.getElementById('rl').textContent = 'Autonomia finale';
     document.getElementById('rv').innerHTML = `${finalKm} km<br><span style="font-size:0.75em; opacity:0.85;">(${finalPerc}%)</span>`;
     document.getElementById('rt').textContent = fmt(currentDurationH);
     document.getElementById('rf').textContent = inpSpeg.value;
-    s2.classList.add('dis');
-    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (ORARIO FISSO)';
-    if (btnCancSpeg) btnCancSpeg.style.display = 'inline-block';
   } else {
-    s2.classList.remove('dis');
-    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
-    if (btnCancSpeg) btnCancSpeg.style.display = 'none';
-
-    if(m==='p'){
-      if(+elTP.value>100) elTP.value=100;
-      const tp=Math.max(pa,+elTP.value||0),dp=Math.max(0,tp-pa),dk=dp*kpReale;
-      currentDurationH = dp / percPerOraReale;
-      document.getElementById('rl').textContent='Autonomia finale (km)';
-      document.getElementById('rv').textContent=Math.round(ka+dk)+" km";
-      updatePresets(ka,pa,maxKm,tp);
-    }else{
-      if(+elTK.value>maxKm) elTK.value=maxKm;
-      const tk=Math.max(ka,+elTK.value||0),dk=Math.max(0,tk-ka),dp=dk*pkReale,pf=Math.min(100,Math.round(pa+dp));
-      currentDurationH = dp / percPerOraReale;
-      document.getElementById('rl').textContent='Autonomia finale (%)';
-      document.getElementById('rv').textContent=pf+"%";
-      updatePresets(ka,pa,maxKm,tk);
-    }
-
-    const endTs = startTs + Math.round(currentDurationH * 3600000);
-    const dtEnd = new Date(endTs);
-    const endStr = String(dtEnd.getHours()).padStart(2, '0') + ':' + String(dtEnd.getMinutes()).padStart(2, '0');
-    const isNextDay = dtEnd.getDate() !== adesso.getDate();
-
-    document.getElementById('rt').textContent = fmt(currentDurationH);
-    document.getElementById('rf').innerHTML = isNextDay ? `${endStr}<small>+1g</small>` : endStr;
-
-    if (inpSpeg && document.activeElement !== inpSpeg) {
-      inpSpeg.value = currentDurationH > 0 ? endStr : '';
-    }
+    currentDurationH = 0;
+    document.getElementById('rl').textContent = 'Autonomia finale';
+    document.getElementById('rv').innerHTML = `${Math.round(ka)} km<br><span style="font-size:0.75em; opacity:0.85;">(${Math.round(pa)}%)</span>`;
+    document.getElementById('rt').textContent = 'Imposta spegnimento';
+    document.getElementById('rf').textContent = '--:--';
   }
 
   if(session){
-    session.mode=m;
-    session.tP=document.getElementById('tP').value;
-    session.tK=document.getElementById('tK').value;
+    session.mode='p';
     session.durationMs=Math.round(currentDurationH*3600000);
     if(session.startTs + session.durationMs > Date.now()) session.endAlerted=false;
     saveSession(false);
@@ -963,8 +919,11 @@ if(!loadSession()){
   document.querySelectorAll('[onclick*="toggleSound"], .sound-btn, .bell-btn').forEach(el => el.style.display = 'none');
   window.triggerAlert = function() {};
 
+  // Nasconde la vecchia scheda "Orario inizio ricarica" e la scheda "Imposta obiettivo"
   const oldStepTime = document.getElementById('stepTime');
   if (oldStepTime) oldStepTime.style.display = 'none';
+  const oldStep2 = document.getElementById('step2');
+  if (oldStep2) oldStep2.style.display = 'none';
 
   const controlWrapper = document.createElement('div');
   controlWrapper.style.cssText = 'margin-bottom:16px; border-radius:20px; background:#ffffff; box-shadow:0 4px 14px rgba(0,0,0,0.05); border:1px solid #e2e8f0; overflow:hidden;';
@@ -982,28 +941,32 @@ if(!loadSession()){
       ⏳ Verifica presa...
     </button>
 
-    <div id="box-programmazione" style="display:flex; flex-direction:column; gap:10px; transition:opacity 0.2s;">
-      <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:13px; font-weight:800; color:#15803d; text-transform:uppercase; letter-spacing:0.3px;">🟢 Accendi alle</span>
-          <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Svuota ✕</button>
+    <div id="box-programmazione" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; transition:opacity 0.2s;">
+      <div style="background:#ffffff; padding:12px 10px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-size:11px; font-weight:800; color:#15803d; text-transform:uppercase;">🟢 Accendi</span>
+          <button type="button" id="btn-canc-accendi" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:6px; padding:2px 6px; font-size:11px; font-weight:800; cursor:pointer;">✕</button>
         </div>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-accensione', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
-          <input type="time" id="ora-accensione" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
-          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-accensione', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+          <input type="time" id="ora-accensione" style="flex:1; min-width:0; text-align:center; border:none; font-size:22px; font-weight:800; color:#0f172a; background:transparent; outline:none; padding:0;">
+          <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+            <button type="button" id="upAcc" class="arr-btn" style="width:36px; height:26px;">▲</button>
+            <button type="button" id="dnAcc" class="arr-btn" style="width:36px; height:26px;">▼</button>
+          </div>
         </div>
       </div>
 
-      <div style="background:#ffffff; padding:12px 14px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; gap:8px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span id="lbl-spegni" style="font-size:13px; font-weight:800; color:#b91c1c; text-transform:uppercase; letter-spacing:0.3px;">🔴 Spegni (Obiettivo raggiunto)</span>
-          <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer;">Torna all'obiettivo ✕</button>
+      <div style="background:#ffffff; padding:12px 10px; border-radius:16px; border:1px solid #cbd5e1; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="font-size:11px; font-weight:800; color:#b91c1c; text-transform:uppercase;">🔴 Spegni</span>
+          <button type="button" id="btn-canc-spegni" style="display:none; border:none; background:#fee2e2; color:#b91c1c; border-radius:6px; padding:2px 6px; font-size:11px; font-weight:800; cursor:pointer;">✕</button>
         </div>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-spegnimento', -15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">-15</button>
-          <input type="time" id="ora-spegnimento" style="flex:1; text-align:center; border:none; font-size:28px; font-weight:800; color:#0f172a; background:transparent; outline:none; min-height:46px;">
-          <button type="button" class="btn-step-orario" onclick="spostaOrario('ora-spegnimento', 15)" style="width:46px; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#0f172a; font-size:18px; font-weight:800; cursor:pointer;">+15</button>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+          <input type="time" id="ora-spegnimento" style="flex:1; min-width:0; text-align:center; border:none; font-size:22px; font-weight:800; color:#0f172a; background:transparent; outline:none; padding:0;">
+          <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+            <button type="button" id="upSpeg" class="arr-btn" style="width:36px; height:26px;">▲</button>
+            <button type="button" id="dnSpeg" class="arr-btn" style="width:36px; height:26px;">▼</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1029,11 +992,13 @@ if(!loadSession()){
     const btnProg = document.getElementById('btn-attiva-prog');
     const inpAcc = document.getElementById('ora-accensione');
     const inpSpeg = document.getElementById('ora-spegnimento');
-    const stepBtns = document.querySelectorAll('.btn-step-orario');
 
     if (inpAcc) inpAcc.disabled = attiva;
     if (inpSpeg) inpSpeg.disabled = attiva;
-    stepBtns.forEach(b => b.disabled = attiva);
+    ['upAcc', 'dnAcc', 'upSpeg', 'dnSpeg'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.disabled = attiva;
+    });
     if (box) box.style.opacity = attiva ? '0.65' : '1';
 
     if (btnProg) {
@@ -1051,7 +1016,7 @@ if(!loadSession()){
     }
   }
 
-  window.spostaOrario = function(idInput, deltaMin) {
+  function stepOrarioMinuto(idInput, deltaMin) {
     if (programmazioneAttiva) return;
     const inp = document.getElementById(idInput);
     if (!inp) return;
@@ -1068,7 +1033,15 @@ if(!loadSession()){
     const mm = String(nuovoTot % 60).padStart(2, '0');
     inp.value = `${hh}:${mm}`;
     inp.dispatchEvent(new Event('change'));
-  };
+  }
+
+  // Collega le frecce con accelerazione progressiva (bindHold)
+  if (typeof bindHold === 'function') {
+    bindHold('upAcc', () => stepOrarioMinuto('ora-accensione', 1));
+    bindHold('dnAcc', () => stepOrarioMinuto('ora-accensione', -1));
+    bindHold('upSpeg', () => stepOrarioMinuto('ora-spegnimento', 1));
+    bindHold('dnSpeg', () => stepOrarioMinuto('ora-spegnimento', -1));
+  }
 
   function calcolaProssimoTimestamp(timeStr, baseTs = Date.now()) {
     const [hh, mm] = timeStr.split(':').map(Number);
@@ -1122,15 +1095,14 @@ if(!loadSession()){
       }
     }
 
-    spegnimentoManuale = Boolean(d.spegnimentoManuale);
     const inputSpegni = document.getElementById('ora-spegnimento');
     const btnCancSpegni = document.getElementById('btn-canc-spegni');
     if (inputSpegni && btnCancSpegni) {
-      if (hasSpeg && spegnimentoManuale) {
+      if (hasSpeg) {
         inputSpegni.value = formattaOraDaTs(d.spegnimentoProgrammatoTs);
         btnCancSpegni.style.display = 'none';
-      } else if (!programmazioneAttiva && spegnimentoManuale) {
-        btnCancSpegni.style.display = 'inline-block';
+      } else if (!programmazioneAttiva) {
+        btnCancSpegni.style.display = inputSpegni.value ? 'inline-block' : 'none';
       }
     }
 
@@ -1167,10 +1139,6 @@ if(!loadSession()){
     }
 
     if (typeof calc === 'function') calc(false, false);
-    const lblSpeg = document.getElementById('lbl-spegni');
-    if (lblSpeg) {
-      lblSpeg.textContent = spegnimentoManuale ? '🔴 SPEGNI (ORARIO FISSO)' : '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
-    }
     if (typeof tick === 'function') tick();
     aggiornaVisibilitaReset(d);
   }
@@ -1201,24 +1169,14 @@ if(!loadSession()){
   });
 
   document.getElementById('ora-spegnimento').addEventListener('change', (e) => {
-    if (!e.target.value) {
-      spegnimentoManuale = false;
-      document.getElementById('btn-canc-spegni').style.display = 'none';
-    } else {
-      spegnimentoManuale = true;
-      document.getElementById('btn-canc-spegni').style.display = 'inline-block';
-    }
+    document.getElementById('btn-canc-spegni').style.display = e.target.value ? 'inline-block' : 'none';
     if (typeof calc === 'function') calc(false, false);
-    const lblSpeg = document.getElementById('lbl-spegni');
-    if (lblSpeg) lblSpeg.textContent = spegnimentoManuale ? '🔴 SPEGNI (ORARIO FISSO)' : '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
   });
 
   document.getElementById('btn-canc-spegni').addEventListener('click', () => {
-    spegnimentoManuale = false;
+    document.getElementById('ora-spegnimento').value = '';
     document.getElementById('btn-canc-spegni').style.display = 'none';
     if (typeof calc === 'function') calc(false, false);
-    const lblSpeg = document.getElementById('lbl-spegni');
-    if (lblSpeg) lblSpeg.textContent = '🔴 SPEGNI (OBIETTIVO RAGGIUNTO)';
   });
 
   document.getElementById('btn-attiva-prog').addEventListener('click', async () => {
@@ -1228,11 +1186,11 @@ if(!loadSession()){
       await fetch(DB_URL, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accensioneProgrammataTs: null, spegnimentoProgrammatoTs: null, spegnimentoManuale: false })
+        body: JSON.stringify({ accensioneProgrammataTs: null, spegnimentoProgrammatoTs: null })
       }).catch(() => {});
       aggiornaBloccoCampiProgrammazione(false);
       document.getElementById('btn-canc-accendi').style.display = document.getElementById('ora-accensione').value ? 'inline-block' : 'none';
-      if (spegnimentoManuale) document.getElementById('btn-canc-spegni').style.display = 'inline-block';
+      document.getElementById('btn-canc-spegni').style.display = document.getElementById('ora-spegnimento').value ? 'inline-block' : 'none';
     } else {
       const valAcc = document.getElementById('ora-accensione').value;
       const valSpeg = document.getElementById('ora-spegnimento').value;
@@ -1249,8 +1207,7 @@ if(!loadSession()){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           accensioneProgrammataTs: accTs,
-          spegnimentoProgrammatoTs: spegTs,
-          spegnimentoManuale: spegnimentoManuale
+          spegnimentoProgrammatoTs: spegTs
         })
       }).catch(() => {});
 
@@ -1267,15 +1224,13 @@ if(!loadSession()){
   });
   async function salvaSoloParametri() {
     const payload = {
-      inKm: +elKm.value || 0, inPerc: +elPerc.value || 0,
-      targetP: +document.getElementById('tP').value || 80,
-      targetK: +document.getElementById('tK').value || 300,
-      mode: typeof m !== 'undefined' ? m : 'p'
+      inKm: +elKm.value || 0,
+      inPerc: +elPerc.value || 0
     };
     await fetch(DB_URL, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
   }
 
-  ['inKm', 'inPerc', 'tP', 'tK'].forEach(id => {
+  ['inKm', 'inPerc'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', salvaSoloParametri);
   });
@@ -1303,7 +1258,7 @@ if(!loadSession()){
       const listaEl = document.getElementById('storico-lista');
       const totEl = document.getElementById('storico-tot');
       if (!data) { listaEl.innerHTML = 'Nessuna ricarica salvata nello storico.'; totEl.textContent = '0.00 kWh totali'; return; }
-      const voci = Object.entries(data).sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
+      const voci = Object.entries(data).sort((a, b) => (b.ts || 0) - (a.ts || 0));
       const sommaKwh = voci.reduce((acc, [, v]) => acc + (Number(v.kwh) || 0), 0);
       totEl.textContent = `${sommaKwh.toFixed(2)} kWh totali`;
       listaEl.innerHTML = voci.map(([id, v]) => `
