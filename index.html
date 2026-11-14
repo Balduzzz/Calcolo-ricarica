@@ -932,26 +932,10 @@ if(!loadSession()){
   const oldStep2 = document.getElementById('step2');
   if (oldStep2) oldStep2.style.display = 'none';
 
-  // Rinomina "AUTONOMIA ATTUALE" in "AUTONOMIA DI PARTENZA" e aggiunge sotto la scheda "AUTONOMIA ATTUALE"
-  const cardPartenza = document.getElementById('cardCurrent');
+    const cardPartenza = document.getElementById('cardCurrent');
   if (cardPartenza) {
     const titPartenza = cardPartenza.querySelector('.ct span');
     if (titPartenza) titPartenza.textContent = 'AUTONOMIA DI PARTENZA';
-
-    if (!document.getElementById('cardLiveNow')) {
-      const cardAttuale = document.createElement('div');
-      cardAttuale.className = 'card';
-      cardAttuale.id = 'cardLiveNow';
-      cardAttuale.style.height = '124px';
-      cardAttuale.innerHTML = `
-        <div class="ct"><span>AUTONOMIA ATTUALE</span></div>
-        <div class="row">
-          <div class="iw"><input type="text" id="liveKm" value="--" readonly tabindex="-1"><span class="u">km</span></div>
-          <div class="iw"><input type="text" id="livePerc" value="--" readonly tabindex="-1"><span class="u">%</span></div>
-        </div>
-      `;
-      cardPartenza.parentNode.insertBefore(cardAttuale, cardPartenza.nextSibling);
-    }
   }
 
   const controlWrapper = document.createElement('div');
@@ -1172,15 +1156,15 @@ if(!loadSession()){
       secondiTotali += Math.max(0, (Date.now() - d.inizioSegmentoTs) / 1000);
     }
 
-    // Aggiorna i due display "AUTONOMIA ATTUALE" con il progresso della ricarica
-    const liveKmEl = document.getElementById('liveKm');
-    const livePercEl = document.getElementById('livePerc');
+       // Aggiorna i due campi del display verde "AUTONOMIA ATTUALE (IN TEMPO REALE)"
+    const cardVerde = Array.from(document.querySelectorAll('.card')).find(c => c.textContent.includes('TEMPO REALE'));
+    const inputsVerdi = cardVerde ? cardVerde.querySelectorAll('input') : [];
     const ka = Math.max(0, +elKm.value || 0);
     const pa = Math.min(100, Math.max(0, +elPerc.value || 0));
-    if (liveKmEl && livePercEl) {
+    if (inputsVerdi.length >= 2) {
       if (elKm.value === '' || elPerc.value === '') {
-        liveKmEl.value = '--';
-        livePercEl.value = '--';
+        inputsVerdi[0].value = '--';
+        inputsVerdi[1].value = '--';
       } else {
         const { v, kp } = getParams();
         const kpReale = (ka > 0 && pa > 0) ? (ka / pa) : kp;
@@ -1188,10 +1172,11 @@ if(!loadSession()){
         const gainedPerc = (secondiTotali / 3600) * percPerOra;
         const curPerc = Math.min(100, Math.round(pa + gainedPerc));
         const curKm = Math.min(Math.round(100 * kpReale), Math.round(ka + gainedPerc * kpReale));
-        liveKmEl.value = curKm;
-        livePercEl.value = curPerc;
+        inputsVerdi[0].value = curKm;
+        inputsVerdi[1].value = curPerc;
       }
     }
+
 
     if (staCaricando) {
       badge.innerHTML = `🟢 IN CARICA: <b>${watt} W</b> (${kw} kW)<br>⚡ Energia reale immessa: <b>${kwh} kWh</b>`;
