@@ -743,9 +743,27 @@ document.getElementById('btn-toggle-presa').addEventListener('click', async () =
   } catch (e) { document.getElementById('stato-presa-badge').innerHTML = '⚠️ Errore invio comando alla presa'; }
 });
 
+document.getElementById('btn-toggle-presa').addEventListener('click', async () => {
+  const nuovoStato = presaAttualmenteAccesa ? 0 : 1;
+  const msg = nuovoStato === 1
+    ? 'Vuoi accendere subito la presa?'
+    : ((liveState.stato === 'in_corso' || (liveState.wattAttuali || 0) > 50)
+        ? 'La ricarica è in corso. Vuoi davvero spegnere la presa?'
+        : 'Vuoi spegnere subito la presa?');
+  if (!confirm(msg)) return;
+
+  document.getElementById('btn-toggle-presa').textContent = nuovoStato === 1 ? '⏳ Accensione...' : '⏳ Spegnimento...';
+  try {
+    const res = await fetch(`${FN_URL}?toggle=${nuovoStato}`);
+    const data = await res.json();
+    if (data && data.statoDb) renderLiveHardware(data.statoDb);
+  } catch (e) { document.getElementById('stato-presa-badge').innerHTML = '⚠️ Errore invio comando alla presa'; }
+});
+
 document.getElementById('btn-attiva-prog').addEventListener('click', async () => {
   const btnProg = document.getElementById('btn-attiva-prog');
   if (programmazioneAttiva) {
+    if (!confirm('Vuoi disattivare la programmazione attiva?')) return;
     btnProg.textContent = '⏳ Disattivazione...';
     await update(liveRef, {
       accensioneProgrammataTs: null,
@@ -762,6 +780,7 @@ document.getElementById('btn-attiva-prog').addEventListener('click', async () =>
       alert('Imposta almeno un orario di avvio o uno spegnimento prima di attivare.');
       return;
     }
+    if (!confirm('Confermi l\'attivazione della programmazione impostata?')) return;
     btnProg.textContent = '⏳ Attivazione...';
     const accTs = valAcc ? calcolaProssimoTimestamp(valAcc, Date.now()) : null;
     let spegTs = null;
