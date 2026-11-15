@@ -661,6 +661,44 @@ function renderLiveHardware(d) {
   const btnReset = document.getElementById('btnResetSession');
   const haDati = Boolean(liveState.stato === 'pausa' || (liveState.kwhImmesso || 0) > 0 || (liveState.secondiAccumulati || 0) > 0);
   btnReset.style.display = (!staCaricando && haDati) ? 'block' : 'none';
+
+  const elK = document.getElementById('inKm');
+  const elP = document.getElementById('inPerc');
+  if ((staCaricando || haDati) && liveState.inKmSessione && liveState.inPercSessione && !window.sbloccoManualePartenza) {
+    if (document.activeElement !== elK && document.activeElement !== elP) {
+      if (elK.value !== String(liveState.inKmSessione) || elP.value !== String(liveState.inPercSessione)) {
+        elK.value = liveState.inKmSessione;
+        elP.value = liveState.inPercSessione;
+        pushSharedState();
+      }
+    }
+  }
+
+  const hasPartenza = elK.value !== '' && elP.value !== '';
+  const bloccaPartenza = (staCaricando || haDati) && hasPartenza && !window.sbloccoManualePartenza;
+  document.getElementById('cardCurrent').classList.toggle('dis', bloccaPartenza);
+
+  let btnLock = document.getElementById('btnLockPartenza');
+  if (!btnLock) {
+    btnLock = document.createElement('button');
+    btnLock.id = 'btnLockPartenza';
+    btnLock.type = 'button';
+    btnLock.style.cssText = 'border:1px solid var(--brd); background:var(--bg); color:var(--mut); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:800; cursor:pointer; pointer-events:auto;';
+    btnLock.onclick = () => {
+      if (!confirm('Sbloccare temporaneamente i dati di partenza per correggerli?')) return;
+      window.sbloccoManualePartenza = true;
+      renderLiveHardware(liveState);
+      clearTimeout(window.timerSbloccoPartenza);
+      window.timerSbloccoPartenza = setTimeout(() => {
+        window.sbloccoManualePartenza = false;
+        renderLiveHardware(liveState);
+      }, 20000);
+    };
+    document.querySelector('#cardCurrent .ct').appendChild(btnLock);
+  }
+  btnLock.style.display = bloccaPartenza ? 'inline-block' : 'none';
+  btnLock.textContent = '🔒 Modifica';
+
   aggiornaCalcoli();
 }
 onValue(sharedRef, (snap) => {
@@ -709,6 +747,11 @@ onValue(liveRef, (snap) => {
     if (id === 'inPerc' && +el.value > 100) el.value = 100;
     aggiornaCalcoli();
     pushSharedState();
+    const k = document.getElementById('inKm').value;
+    const p = document.getElementById('inPerc').value;
+    if (k !== '' && p !== '') {
+      update(liveRef, { inKmSessione: k, inPercSessione: p });
+    }
   });
 });
 
@@ -769,7 +812,6 @@ document.getElementById('btn-toggle-presa').addEventListener('click', async () =
     if (data && data.statoDb) renderLiveHardware(data.statoDb);
   } catch (e) { document.getElementById('stato-presa-badge').innerHTML = '⚠️ Errore invio comando alla presa'; }
 });
-
 document.getElementById('btn-attiva-prog').addEventListener('click', async () => {
   const btnProg = document.getElementById('btn-attiva-prog');
   if (programmazioneAttiva) {
@@ -884,10 +926,14 @@ document.getElementById('btnResetSession').addEventListener('click', async () =>
       body: JSON.stringify({ ts: Date.now(), dataStr, kwh: Number(liveState.kwhImmesso || 0), durataStr, percIn, percOut })
     }).catch(() => {});
   }
-  await update(liveRef, { stato: 'attesa', secondiAccumulati: 0, inizioSegmentoTs: null, kwhImmesso: 0, wattAttuali: 0, kwAttuali: 0 });
+  window.sbloccoManualePartenza = false;
+  await update(liveRef, { stato: 'attesa', secondiAccumulati: 0, inizioSegmentoTs: null, kwhImmesso: 0, wattAttuali: 0, kwAttuali: 0, inKmSessione: null, inPercSessione: null });
 });
 
-async function aggiornaDaPresa() {
+  
+  
+  
+  async function aggiornaDaPresa() {
   try {
     const res = await fetch(FN_URL);
     const data = await res.json();
