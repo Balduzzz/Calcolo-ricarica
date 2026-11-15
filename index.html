@@ -812,21 +812,34 @@ document.getElementById('btn-attiva-prog').addEventListener('click', async () =>
   }
 });
 
+let storicoAperto = false;
+let storicoPinVerificato = false;
+
 document.getElementById('storicoMount').innerHTML = `
-  <div style="margin-top:14px; padding:6px; border-radius:14px; background:var(--bg); border:1px solid var(--brd); font-size:13px;">
-    <div style="font-weight:800; font-size:13px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-      <span>📊 STORICO RICARICHE</span>
-      <span id="storico-tot" style="font-size:12px; color:#15803d; background:#dcfce7; padding:3px 8px; border-radius:8px;">0.00 kWh</span>
+  <div style="margin-top:10px; border-radius:14px; background:var(--bg); border:1px solid var(--brd); overflow:hidden;">
+    <div id="storico-header" style="padding:10px 12px; font-weight:800; font-size:13px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none;">
+      <span>📊 STORICO RICARICHE <span id="storico-arrow" style="font-size:11px; color:var(--mut); margin-left:4px;">▼</span></span>
+      <span id="storico-tot" style="font-size:12px; color:#15803d; background:#dcfce7; padding:3px 8px; border-radius:8px;">0.00 kWh totali</span>
     </div>
-    <div id="storico-lista" style="color:var(--mut); font-size:12px;">Nessuna ricarica salvata.</div>
+    <div id="storico-lista" style="display:none; padding:0 12px 10px 12px; color:var(--mut); font-size:12px; border-top:1px solid var(--brd);">Nessuna ricarica salvata.</div>
   </div>
 `;
+
+document.getElementById('storico-header').addEventListener('click', () => {
+  storicoAperto = !storicoAperto;
+  document.getElementById('storico-lista').style.display = storicoAperto ? 'block' : 'none';
+  document.getElementById('storico-arrow').textContent = storicoAperto ? '▲' : '▼';
+});
 
 onValue(storicoRef, (snap) => {
   const data = snap.val();
   const listaEl = document.getElementById('storico-lista');
   const totEl = document.getElementById('storico-tot');
-  if (!data) { listaEl.innerHTML = 'Nessuna ricarica salvata nello storico.'; totEl.textContent = '0.00 kWh totali'; return; }
+  if (!data) {
+    listaEl.innerHTML = '<div style="padding-top:8px;">Nessuna ricarica salvata nello storico.</div>';
+    totEl.textContent = '0.00 kWh totali';
+    return;
+  }
   const voci = Object.entries(data).sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
   const sommaKwh = voci.reduce((acc, [, v]) => acc + (Number(v.kwh) || 0), 0);
   totEl.textContent = `${sommaKwh.toFixed(2)} kWh totali`;
@@ -836,13 +849,21 @@ onValue(storicoRef, (snap) => {
         <div style="font-weight:700; color:var(--txt);">${v.dataStr} • ⚡ ${Number(v.kwh).toFixed(2)} kWh</div>
         <div style="font-size:11px; color:var(--mut);">Durata: ${v.durataStr} | Batteria: ${v.percIn}% → ${v.percOut}%</div>
       </div>
-      <button type="button" onclick="eliminaVoceStorico('${id}')" style="background:none; border:none; color:#ef4444; font-size:15px; cursor:pointer; padding:4px 8px;">🗑️</button>
+      <button type="button" onclick="eliminaVoceStorico('${id}')" style="background:#fee2e2; border:none; border-radius:8px; color:#b91c1c; font-size:14px; cursor:pointer; padding:5px 8px;">🗑️</button>
     </div>
   `).join('');
 });
 
 window.eliminaVoceStorico = async (id) => {
-  if (!confirm('Eliminare questa ricarica dallo storico?')) return;
+  if (!confirm('Vuoi davvero eliminare questa ricarica dallo storico?')) return;
+  if (!storicoPinVerificato) {
+    const inserito = prompt('Inserisci il PIN per autorizzare l\'eliminazione:');
+    if (inserito !== PIN) {
+      if (inserito !== null) alert('PIN errato. Eliminazione annullata.');
+      return;
+    }
+    storicoPinVerificato = true;
+  }
   await remove(ref(db, 'storico_ricariche/' + id));
 };
 
