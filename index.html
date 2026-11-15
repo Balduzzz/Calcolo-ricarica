@@ -270,9 +270,12 @@ document.getElementById('hardwareMount').innerHTML = `
 `;
 function pushSharedState() {
   if (isSyncingFromCloud) return;
+  const valKm = document.getElementById('inKm').value;
+  const valPerc = document.getElementById('inPerc').value;
+  if (valKm === '' && valPerc === '' && (liveState.stato === 'in_corso' || (liveState.secondiAccumulati || 0) > 0 || (liveState.kwhImmesso || 0) > 0)) return;
   const payload = {
-    inKm: document.getElementById('inKm').value,
-    inPerc: document.getElementById('inPerc').value,
+    inKm: valKm,
+    inPerc: valPerc,
     bozzaAcc: document.getElementById('ora-accensione').value,
     bozzaSpegMode: spegniMode,
     bozzaSpegOra: document.getElementById('ora-spegnimento').value,
@@ -658,7 +661,6 @@ function renderLiveHardware(d) {
   const btnReset = document.getElementById('btnResetSession');
   const haDati = Boolean(liveState.stato === 'pausa' || (liveState.kwhImmesso || 0) > 0 || (liveState.secondiAccumulati || 0) > 0);
   btnReset.style.display = (!staCaricando && haDati) ? 'block' : 'none';
-  document.getElementById('cardCurrent').classList.toggle('dis', staCaricando);
   aggiornaCalcoli();
 }
 onValue(sharedRef, (snap) => {
