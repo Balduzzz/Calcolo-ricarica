@@ -539,7 +539,7 @@ function aggiornaCalcoli() {
       document.getElementById('rt').textContent = '--';
       document.getElementById('rvKm').textContent = `${curKm} km`;
       document.getElementById('rvPerc').textContent = `${curPerc}%`;
-      subSpeg.textContent = 'Imposta % di spegnimento';
+      subSpeg.textContent = 'Imposta % spegnimento';
       return;
     }
     if (!programmazioneAttiva && document.activeElement !== inpSpegPerc && +inpSpegPerc.value <= curPerc) {
