@@ -3,7 +3,8 @@ const mqtt = require('mqtt');
 
 const PRESA_UUID = '26030559847382513701c4e7ae28c239';
 const DB_HOST = 'ricarica-condivisa-default-rtdb.europe-west1' + '.firebasedatabase.app';
-const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json';
+const FB_SECRET = (process.env.FIREBASE_SECRET || '').trim();
+const DB_URL = 'https://' + DB_HOST + '/ricarica_live.json' + (FB_SECRET ? `?auth=${FB_SECRET}` : '');
 const DEFAULT_MQTT = ['mqtt-eu-4', 'meross', 'com'].join('.');
 
 function queryDeviceMqtt(userId, key, domain, uuid, namespace, method = 'GET', payload = {}) {
@@ -90,7 +91,7 @@ exports.handler = async function (event) {
 
     const qs = event.queryStringParameters || {};
     const fbRes = await fetch(DB_URL).then(r => r.json()).catch(() => null);
-    let statoDb = (fbRes && typeof fbRes === 'object') ? fbRes : {
+    let statoDb = (fbRes && typeof fbRes === 'object' && !fbRes.error) ? fbRes : {
       stato: 'attesa',
       secondiAccumulati: 0,
       inizioSegmentoTs: null,
