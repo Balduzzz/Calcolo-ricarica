@@ -108,12 +108,24 @@ const gFolder = ['firebasejs', '10.12.2'].join('/');
 const FB_BASE = `https://${gHost}/${gFolder}/`;
 
 const { initializeApp } = await import(FB_BASE + 'firebase-app.js');
-const { getDatabase, ref, set, update, onValue, onDisconnect, remove } = await import(FB_BASE + 'firebase-database.js');
+const { getAuth, signInAnonymously } = await import(FB_BASE + 'firebase-auth.js');
+const { getDatabase, ref, set, push, update, onValue, onDisconnect, remove } = await import(FB_BASE + 'firebase-database.js');
 
 const DB_HOST = ['ricarica-condivisa-default-rtdb', 'europe-west1', 'firebasedatabase', 'app'].join('.');
-const firebaseConfig = { databaseURL: 'https://' + DB_HOST };
+const firebaseConfig = {
+  apiKey: ['AIzaSyCRQgDwokBZMfs0', 'krOLYptvau0rzStEAgo'].join(''),
+  authDomain: "ricarica-condivisa.firebaseapp.com",
+  databaseURL: 'https://' + DB_HOST,
+  projectId: "ricarica-condivisa",
+  storageBucket: "ricarica-condivisa.firebasestorage.app",
+  messagingSenderId: "825879276261",
+  appId: "1:825879276261:web:6e7b70bd142f1364ebc20c"
+};
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+await signInAnonymously(auth).catch((e) => console.error("Errore auth:", e));
+
 const db = getDatabase(app);
 const sharedRef = ref(db, "stato_condiviso");
 const liveRef = ref(db, "ricarica_live");
@@ -921,10 +933,15 @@ document.getElementById('btnResetSession').addEventListener('click', async () =>
     const percIn = Number(document.getElementById('inPerc').value || 0);
     const { v, kp } = getParams();
     const percOut = Math.min(100, Math.round(percIn + (secTot / 3600) * (v / kp)));
-    await fetch(STORICO_URL, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ts: Date.now(), dataStr, kwh: Number(liveState.kwhImmesso || 0), durataStr, percIn, percOut })
+       await push(storicoRef, {
+      ts: Date.now(),
+      dataStr,
+      kwh: Number(liveState.kwhImmesso || 0),
+      durataStr,
+      percIn,
+      percOut
     }).catch(() => {});
+
   }
   window.sbloccoManualePartenza = false;
   await update(liveRef, { stato: 'attesa', secondiAccumulati: 0, inizioSegmentoTs: null, kwhImmesso: 0, wattAttuali: 0, kwAttuali: 0, inKmSessione: null, inPercSessione: null });
